@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
+import Header from '../components/Header.vue'
+import Footer from '../components/Footer.vue'
 
 interface PageProps {
   auth: {
@@ -12,7 +14,6 @@ interface PageProps {
   }
   [key: string]: unknown // ✅ Required for Inertia compatibility
 }
-
 
 const page = usePage<PageProps>()
 </script>
@@ -33,64 +34,7 @@ const page = usePage<PageProps>()
       backgroundRepeat: 'no-repeat',
     }"
   >
-    <header class="not-has-[nav]:hidden mb-6 w-full text-sm lg:max-w-7xl">
-      <nav class="flex items-center justify-between gap-4">
-        <Link
-          v-if="page.props.auth.user"
-          :href="route('dashboard')"
-          class="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] transition-colors duration-300 hover:decoration-[#1E4F4F] hover:underline hover:decoration-2 hover:underline-offset-4 dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-        >
-          Dashboard
-        </Link>
-
-        <template v-else>
-          <div><img src="images/DRP.png" alt="DRP Logo" /></div>
-          <div class="flex items-center justify-between gap-5">
-            <Link
-              :href="route('login')"
-              class="inline-block border-b-2 border-transparent px-5 py-1.5 text-base font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 hover:bg-gradient-to-t hover:from-[#ffffff50] hover:to-[#ffffff00] hover:text-white"
-            >
-              Home
-            </Link>
-
-            <Link
-              :href="route('login')"
-              class="inline-block border-b-2 border-transparent px-5 py-1.5 text-base font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 hover:bg-gradient-to-t hover:from-[#ffffff50] hover:to-[#ffffff00] hover:text-white"
-            >
-              About Us
-            </Link>
-
-            <Link
-              :href="route('branches')"
-              class="inline-block border-b-2 border-transparent px-5 py-1.5 text-base font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 hover:bg-gradient-to-t hover:from-[#ffffff50] hover:to-[#ffffff00] hover:text-white"
-            >
-              Branches
-            </Link>
-
-            <Link
-              :href="route('login')"
-              class="inline-block border-b-2 border-transparent px-5 py-1.5 text-base font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 hover:bg-gradient-to-t hover:from-[#ffffff50] hover:to-[#ffffff00] hover:text-white"
-            >
-              Services
-            </Link>
-
-            <Link
-              :href="route('login')"
-              class="inline-block border-b-2 border-transparent px-5 py-1.5 text-base font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 hover:bg-gradient-to-t hover:from-[#ffffff50] hover:to-[#ffffff00] hover:text-white"
-            >
-              Contact Us
-            </Link>
-
-            <Link
-              :href="route('login')"
-              class="inline-block rounded-2xl border border-transparent px-5 py-1.5 text-base leading-normal text-[#1b1b18] dark:bg-[#1E4F4F] dark:text-[#EDEDEC]"
-            >
-              Log in
-            </Link>
-          </div>
-        </template>
-      </nav>
-    </header>
+    <Header />
 
     <div class="duration-750 starting:opacity-0 flex w-full items-center justify-center opacity-100 transition-opacity lg:grow">
       <main class="block w-full flex-col-reverse overflow-hidden rounded-lg lg:max-w-7xl lg:flex-row">
@@ -111,5 +55,7 @@ const page = usePage<PageProps>()
     </div>
 
     <div class="h-14.5 hidden lg:block"></div>
+    
   </div>
+  <Footer />
 </template>
