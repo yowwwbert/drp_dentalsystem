@@ -39,6 +39,16 @@ const branches = [
     phone: '(0962) 344 9494',
     email: 'drpmanila03@gmail.com',
   },
+  {
+    location: 'Taguig',
+    address: 'RedDoorz Plus @ dBuilders Poblacion, BGC 4A Gen. Luna St, Taguig City, 1673 Metro Manila',
+    schedule: 'Mon - Sat\n10AM - 6PM',
+    instagram: '@drpmanila03',
+    facebook: 'DRP Dental Clinic - Taguig',
+    phone: '(0917) 809 0936',
+    email: 'drpmanila03@gmail.com',
+  },
+
 ]
 </script>
 

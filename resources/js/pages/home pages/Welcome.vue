@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import Header from '../components/Header.vue'
-import Footer from '../components/Footer.vue'
+import Header from '../../components/default UI/Header.vue'
+import Footer from '../../components/default UI/Footer.vue'
 
 interface PageProps {
   auth: {
@@ -9,10 +9,9 @@ interface PageProps {
       id: number
       name: string
       email: string
-      // Add more fields if needed
     } | null
   }
-  [key: string]: unknown // ✅ Required for Inertia compatibility
+  [key: string]: unknown 
 }
 
 const page = usePage<PageProps>()

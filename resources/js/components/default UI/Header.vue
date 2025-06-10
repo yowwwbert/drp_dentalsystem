@@ -30,31 +30,36 @@ const page = usePage<PageProps>()
             <div class="flex items-center justify-between gap-5 mr-10">
             <Link
                 :href="route('home')"
-                class="inline-block border-b-2 border-transparent px-7 py-3 text-lg font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :class="route().current('home') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
             >
                 Home
             </Link>
             <Link
-                :href="route('login')"
-                class="inline-block border-b-2 border-transparent px-7 py-3 text-lg font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :href="route('about')"
+                class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :class="route().current('about') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
             >
                 About Us
             </Link>
             <Link
                 :href="route('branches')"
-                class="inline-block border-b-2 border-transparent px-7 py-3 text-lg font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :class="route().current('branches') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
             >
                 Branches
             </Link>
             <Link
-                :href="route('login')"
-                class="inline-block border-b-2 border-transparent px-7 py-3 text-lg font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :href="route('services')"
+                class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :class="route().current('services') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
             >
                 Services
             </Link>
             <Link
-                :href="route('login')"
-                class="inline-block border-b-2 border-transparent px-7 py-3 text-lg font-medium leading-normal text-[#1E4F4F] transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :href="route('contact')"
+                class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
+                :class="route().current('contact') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
             >
                 Contact Us
             </Link>
