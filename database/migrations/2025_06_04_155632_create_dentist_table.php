@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('dentist', function (Blueprint $table) {
+        Schema::create('dentists', function (Blueprint $table) {
             $table->string('dentist_id', 50)->primary();
             $table->foreign('dentist_id')
                 ->references('user_id')
