@@ -86,7 +86,7 @@ const services = [
 
 <template>
   <div
-    class="flex min-h-screen flex-col p-4 items-center text-[#1b1b18] dark:text-[#EDEDEC] lg:justify-center lg:p-2"
+    class="flex min-h-screen flex-col p-4 items-center text-[#1b1b18] dark:text-[#EDEDEC] lg:justify-center lg:p-2 overflow-visible"
     :style="{
       backgroundImage:
       'linear-gradient(to right, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0)), url(\'/images/DRPBACKGROUND.jpg\')',
@@ -97,52 +97,67 @@ const services = [
   >
     <Header />
 
-    <div class="py-12 px-10 w-full max-w-[85rem] mt-24 relative">
-      <h1 class="text-center text-6xl font-bold uppercase tracking-wide text-[#1E4F4F] mb-12">
-        Our Services
-      </h1>
-      <swiper
-        :slides-per-view="4"
-        :space-between="20"
-        :navigation="true"
-        :modules="modules"
-        class="mySwiper"
-        :loop="true"
-        :autoplay="{
-          delay: 3000,
-          disableOnInteraction: false,
-        }"
-        :breakpoints="{
-          320: { slidesPerView: 1, spaceBetween: 10 },
-          640: { slidesPerView: 2, spaceBetween: 20 },
-          768: { slidesPerView: 3, spaceBetween: 20 },
-          1024: { slidesPerView: 4, spaceBetween: 20 },
-        }"
-      >
-        <swiper-slide v-for="service in services" :key="service.id">
-          <div
-            class="relative bg-white rounded-lg shadow-lg overflow-hidden border-2 border-[#4D807A] h-[450px] flex flex-col"
-          >
-            <img
-              :src="service.image"
-              :alt="service.title"
-              class="w-full h-48 object-cover"
-            />
+    <div class="py-12 w-full mt-24 relative overflow-visible">
+      <div class="max-w-[85rem] mx-auto px-10 relative">
+        <h1 class="text-center text-6xl font-bold uppercase tracking-wide text-[#1E4F4F] mb-12">
+          Our Services
+        </h1>
+        <div
+          id="swiper-button-prev-custom"
+          class="absolute top-1/2 transform -translate-y-1/2 z-20 flex items-center justify-center cursor-pointer text-[#1E4F4F] hover:text-white transition-colors duration-300"
+        >
+          &#x2039;
+        </div>
+        <div
+          id="swiper-button-next-custom"
+          class="absolute top-1/2 transform -translate-y-1/2 z-20 flex items-center justify-center cursor-pointer text-[#1E4F4F] hover:text-white transition-colors duration-300"
+        >
+          &#x203A;
+        </div>
+
+        <swiper
+          :slides-per-view="4"
+          :space-between="20"
+          :navigation="{ prevEl: '#swiper-button-prev-custom', nextEl: '#swiper-button-next-custom' }"
+          :modules="modules"
+          class="mySwiper"
+          :loop="true"
+          :autoplay="{
+            delay: 3000,
+            disableOnInteraction: false,
+          }"
+          :breakpoints="{
+            320: { slidesPerView: 1, spaceBetween: 10 },
+            640: { slidesPerView: 2, spaceBetween: 20 },
+            768: { slidesPerView: 3, spaceBetween: 20 },
+            1024: { slidesPerView: 4, spaceBetween: 20 },
+          }"
+        >
+          <swiper-slide v-for="service in services" :key="service.id">
             <div
-              class="absolute top-[147px] left-1/2 transform -translate-x-1/2 bg-white rounded-full p-3 shadow-md z-10 border-4 border-white flex items-center justify-center"
-              :class="service.color"
-              style="width: 90px; height: 90px;"
+              class="relative bg-white rounded-lg shadow-lg overflow-hidden border-2 border-[#4D807A] h-[450px] flex flex-col"
             >
-              <img :src="service.icon" :alt="service.title + ' icon'" class="w-16 h-16 object-contain" />
+              <img
+                :src="service.image"
+                :alt="service.title"
+                class="w-full h-48 object-cover"
+              />
+              <div
+                class="absolute top-[147px] left-1/2 transform -translate-x-1/2 bg-white rounded-full p-3 shadow-md z-10 border-4 border-white flex items-center justify-center"
+                :class="service.color"
+                style="width: 90px; height: 90px;"
+              >
+                <img :src="service.icon" :alt="service.title + ' icon'" class="w-16 h-16 object-contain" />
+              </div>
+              <div class="pt-16 px-4 pb-4 text-center flex-1 flex flex-col justify-between">
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ service.title }}</h3>
+                <p class="text-gray-600 text-sm mb-2">{{ service.description }}</p>
+              </div>
+              <div class="h-2 w-full" :class="service.color"></div>
             </div>
-            <div class="pt-16 px-4 pb-4 text-center flex-1 flex flex-col justify-between">
-              <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ service.title }}</h3>
-              <p class="text-gray-600 text-sm mb-2">{{ service.description }}</p>
-            </div>
-            <div class="h-2 w-full" :class="service.color"></div>
-          </div>
-        </swiper-slide>
-      </swiper>
+          </swiper-slide>
+        </swiper>
+      </div>
     </div>
 
     
@@ -151,33 +166,28 @@ const services = [
 </template>
 
 <style scoped>
+.mySwiper {
+  /* Removed padding */
+}
+
 .swiper-button-next, .swiper-button-prev {
-  color: #1E4F4F;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.8);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-top: 0;
-  z-index: 10;
+  /* Removed original Swiper button styles */
+  display: none; /* Hide default Swiper buttons */
 }
 
-.swiper-button-prev {
-  left: -60px;
+/* New styles for custom buttons */
+#swiper-button-prev-custom,
+#swiper-button-next-custom {
+  font-size: 150px; /* Increased font size to make arrows bigger */
+  font-weight: bold;
+  /* Removed padding-top */
 }
 
-.swiper-button-next {
-  right: -60px;
+#swiper-button-prev-custom {
+  left: -20px;
 }
 
-.swiper-button-next:hover, .swiper-button-prev:hover {
-  background-color: #1E4F4F;
-  color: white;
-}
-
-.swiper-button-next::after, .swiper-button-prev::after {
-  font-size: 20px;
+#swiper-button-next-custom {
+  right: -20px;
 }
 </style>
