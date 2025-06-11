@@ -167,20 +167,19 @@ const services = [
 
 <style scoped>
 .mySwiper {
-  /* Removed padding */
+  
 }
 
 .swiper-button-next, .swiper-button-prev {
-  /* Removed original Swiper button styles */
-  display: none; /* Hide default Swiper buttons */
+
+  display: none; 
 }
 
-/* New styles for custom buttons */
+
 #swiper-button-prev-custom,
 #swiper-button-next-custom {
-  font-size: 150px; /* Increased font size to make arrows bigger */
+  font-size: 150px; 
   font-weight: bold;
-  /* Removed padding-top */
 }
 
 #swiper-button-prev-custom {
