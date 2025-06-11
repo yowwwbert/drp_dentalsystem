@@ -86,11 +86,11 @@ const messageField = computed(() => contactFormFields.find(f => f.row === 3))
     </section>
 
     <div class="w-full flex flex-col lg:flex-row bg-white bg-opacity-80 rounded-xl shadow-xl overflow-hidden max-w-6xl mx-auto border-4 border-teal-700 lg:h-[600px] mb-12">
-      <!-- Left: Image -->
+      <!-- Image -->
       <div class="w-full lg:w-1/2 h-96 lg:h-full">
         <img :src="contactImage" alt="Dentist" class="object-cover w-full h-full" />
       </div>
-      <!-- Right: Contact Form -->
+      <!-- Contact Form -->
       <div class="w-full lg:w-1/2 p-10 bg-white flex flex-col justify-center">
         <form class="space-y-6">
           <div class="flex flex-col md:flex-row md:space-x-4">
@@ -133,7 +133,7 @@ const messageField = computed(() => contactFormFields.find(f => f.row === 3))
       </div>
     </div>
 
-    <!-- Contact Information Cards Section -->
+    <!-- Contact Information -->
     <section class="w-full flex flex-col items-center my-12">
       <h2 class="text-4xl font-bold text-center mb-8 text-teal-900">Stay Connected With Our Contact Information</h2>
       <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8 px-4">
@@ -149,3 +149,20 @@ const messageField = computed(() => contactFormFields.find(f => f.row === 3))
   </div>
   <Footer />
 </template>
+
+<style scoped>
+::placeholder {
+  color: rgb(77, 76, 76); 
+  opacity: 0.7;
+}
+
+::-moz-placeholder {
+  color: rgb(77 76 76); 
+  opacity: 0.7;
+}
+
+::-ms-input-placeholder {
+  color: rgb(77 76 76); 
+  opacity: 0.7;
+}
+</style>
