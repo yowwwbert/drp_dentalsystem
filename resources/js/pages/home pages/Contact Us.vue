@@ -95,19 +95,19 @@ const messageField = computed(() => contactFormFields.find(f => f.row === 3))
         <form class="space-y-6">
           <div class="flex flex-col md:flex-row md:space-x-4">
             <div v-for="field in contactFormFields.filter(f => f.row === 1)" :key="field.name" class="flex-1 mb-4 md:mb-0">
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
+              <label class="block text-sm font-medium text-black mb-2">{{ field.label }}</label>
               <input v-if="field.type !== 'textarea'" :type="field.type" :name="field.name" :placeholder="field.placeholder" class="w-full border-b-2 border-gray-300 focus:border-teal-700 outline-none py-2 bg-transparent" />
             </div>
           </div>
           <div class="flex flex-col md:flex-row md:space-x-4">
             <div v-for="field in contactFormFields.filter(f => f.row === 2)" :key="field.name" class="flex-1 mb-4 md:mb-0">
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ field.label }}</label>
+              <label class="block text-sm font-medium text-black mb-2">{{ field.label }}</label>
               <input v-if="field.type !== 'textarea'" :type="field.type" :name="field.name" :placeholder="field.placeholder" class="w-full border-b-2 border-gray-300 focus:border-teal-700 outline-none py-2 bg-transparent" />
             </div>
           </div>
           <div>
             <template v-if="messageField">
-              <label class="block text-sm font-medium text-gray-700 mb-2">{{ messageField.label }}</label>
+              <label class="block text-sm font-medium text-black mb-2">{{ messageField.label }}</label>
               <textarea rows="3" :name="messageField.name" :placeholder="messageField.placeholder" class="w-full border-b-2 border-gray-300 focus:border-teal-700 outline-none py-2 bg-transparent"></textarea>
             </template>
           </div>
