@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('last_name');
             $table->string('middle_name')->nullable();
-            $table->string('suffix')->nullable();
+            $table->enum('suffix', ['Jr.', 'Sr.', 'III', 'IV', 'V'])->nullable();
             $table->integer('age')->nullable();
             $table->date('birth_date')->nullable();
             $table->string('religion')->nullable();
@@ -25,8 +25,11 @@ return new class extends Migration
             $table->enum('user_type', ['Owner', 'Dentist', 'Staff', 'Patient'])->default('Patient');
             $table->string('status')->default('Active');
             $table->string('profile_picture')->nullable()->default('default.jpg');
+            $table->string('valid_id');
             $table->string('password')->nullable();
             $table->rememberToken();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->timestamp('phone_verified_at')->nullable();
             $table->timestamps();
         });
 
@@ -38,7 +41,7 @@ return new class extends Migration
         });
 
         Schema::create('sessions', function (Blueprint $table) {
-            $table->string('sessions_id')->primary();
+            $table->string('id')->primary();
             $table->string('user_id', 50)->nullable()->index();
             $table->foreign('user_id')->references('user_id')->on('users')->onDelete('cascade');
             $table->string('ip_address', 45)->nullable();

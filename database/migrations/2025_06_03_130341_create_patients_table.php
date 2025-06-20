@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->string('patient_id', 50)->primary();
-            $table->string('guardian_name')->nullable();
-            $table->string('guardian_contact')->nullable();
-            $table->string('guardian_email')->unique()->nullable();
+            $table->string('guardian_id')->nullable();
+            $table->foreign('guardian_id')
+                ->references('guardian_id')
+                ->on('guardians')
+                ->onDelete('set null');
             $table->integer('remaining_balance')->nullable();
-            $table->string('valid_id')->nullable()->default('default.jpg');
             $table->timestamps();
 
             $table->foreign('patient_id')
