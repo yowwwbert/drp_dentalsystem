@@ -13,7 +13,7 @@ defineProps<{
 }>();
 
 const form = useForm({
-    email: '',
+    email_address: '',
 });
 
 const submit = () => {
@@ -32,9 +32,9 @@ const submit = () => {
         <div class="space-y-6">
             <form @submit.prevent="submit">
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
-                    <Input id="email" type="email" name="email" autocomplete="off" v-model="form.email" autofocus placeholder="email@example.com" />
-                    <InputError :message="form.errors.email" />
+                    <Label for="email_address">Email address</Label>
+                    <Input id="email_address" type="email" name="email_address" autocomplete="off" v-model="form.email_address" autofocus placeholder="email@example.com" />
+                    <InputError :message="form.errors.email_address" />
                 </div>
 
                 <div class="my-6 flex items-center justify-start">

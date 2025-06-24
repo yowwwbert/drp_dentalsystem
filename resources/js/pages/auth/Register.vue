@@ -8,9 +8,7 @@ import AuthBase from '../../layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
-import { watch } from 'vue';
-import { router } from '@inertiajs/vue3';
-
+import { ref, computed, watch } from 'vue';
 
 const form = useForm({
     first_name: '',
@@ -32,36 +30,55 @@ const form = useForm({
     password_confirmation: '',
 });
 
+// Password strength checker
+const passwordConditions = ref({
+    length: false, // At least 8 characters
+    uppercase: false, // At least one uppercase letter
+    lowercase: false, // At least one lowercase letter
+    number: false, // At least one number
+    special: false, // At least one special character
+});
+
+// Check if all conditions are met
+const isPasswordValid = computed(() => {
+    return Object.values(passwordConditions.value).every(condition => condition);
+});
+
+// Watch password and update conditions
+watch(() => form.password, (newPassword) => {
+    passwordConditions.value = {
+        length: newPassword.length >= 8,
+        uppercase: /[A-Z]/.test(newPassword),
+        lowercase: /[a-z]/.test(newPassword),
+        number: /\d/.test(newPassword),
+        special: /[!@#$%^&*.[\]?.,;:'"_+\-=/()|{}<>~]/.test(newPassword),
+    };
+});
+
+const isPasswordFocused = ref(false);
 
 function computeAge() {
     if (!form.birth_date) {
         form.age = '';
         return;
     }
-
     const birthDate = new Date(form.birth_date);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
     }
-
     form.age = age.toString();
 }
 
-// Watch birth_date and compute age automatically
 watch(() => form.birth_date, () => {
     computeAge();
 });
 
 function userOccupation() {
-    return form.user_type === 'Patient'
-        ? form.occupation
-        : form.user_type;
+    form.occupation = form.user_type === 'Patient' ? form.occupation : form.user_type;
 }
-
 
 const submit = () => {
     computeAge();
@@ -87,6 +104,7 @@ const submit = () => {
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <!-- Name fields in a grid -->
+                 <h1>Personal Information</h1>
                 <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
                     <div class="grid gap-2">
                         <Label for="first_name">First Name</Label>
@@ -160,65 +178,88 @@ const submit = () => {
                     <Label for="occupation">Occupation</Label>
                     <Input id="occupation" type="text" required :tabindex="8" autocomplete="off"
                         v-model="form.occupation" placeholder="Occupation" />
-                    <InputError :message="form.errors.occupation" />
+                        <InputError :message="form.errors.occupation" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="address">Address</Label>
+                        <Input id="address" type="text" required :tabindex="9" autocomplete="street-address"
+                            v-model="form.address" placeholder="Address" />
+                        <InputError :message="form.errors.address" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="valid_id">Valid ID</Label>
+                        <Input id="valid_id" type="file" accept="image/*" :tabindex="10"
+                            @change="form.valid_id = $event.target.files[0]" />
+                        <InputError :message="form.errors.valid_id" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <h1>Account Information</h1>
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="phone_number">Phone number</Label>
+                        <Input id="phone_number" type="tel" required :tabindex="11" autocomplete="tel"
+                            v-model="form.phone_number" placeholder="+63 912 345 6789" />
+                        <InputError :message="form.errors.phone_number" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="email_address">Email address</Label>
+                        <Input id="email_address" type="email" required :tabindex="12" autocomplete="email"
+                            v-model="form.email_address" placeholder="email@example.com" />
+                        <InputError :message="form.errors.email_address" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="password">Password</Label>
+                        <Input id="password" type="password" required :tabindex="13" autocomplete="new-password"
+                            v-model="form.password" placeholder="Password" @focus="isPasswordFocused = true"
+    @blur="isPasswordFocused = false"/>
+                        <InputError :message="form.errors.password" />
+                        <!-- Password Strength Checker -->
+                        <div v-if="isPasswordFocused" class="text-sm text-gray-600 mt-2 ">
+                            <p>Password must include:</p>
+                            <ul class="list-disc pl-5">
+                                <li :class="passwordConditions.length ? 'text-green-600' : 'text-red-600'">
+                                    At least 8 characters
+                                </li>
+                                <li :class="passwordConditions.uppercase ? 'text-green-600' : 'text-red-600'">
+                                    At least one uppercase letter
+                                </li>
+                                <li :class="passwordConditions.lowercase ? 'text-green-600' : 'text-red-600'">
+                                    At least one lowercase letter
+                                </li>
+                                <li :class="passwordConditions.number ? 'text-green-600' : 'text-red-600'">
+                                    At least one number
+                                </li>
+                                <li :class="passwordConditions.special ? 'text-green-600' : 'text-red-600'">
+                                    At least one special character
+                                </li>
+                            </ul>
+                            <p v-if="isPasswordValid" class="text-green-600 font-semibold">Password meets all requirements!</p>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="password_confirmation">Confirm password</Label>
+                        <Input id="password_confirmation" type="password" required :tabindex="14" autocomplete="new-password"
+                            v-model="form.password_confirmation" placeholder="Confirm password" />
+                        <InputError :message="form.errors.password_confirmation" />
+                    </div>
+
+                    <Button type="submit" class="mt-2 w-full" :tabindex="15" :disabled="form.processing">
+                        <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                        <span v-else>Create account</span>
+                    </Button>
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="address">Address</Label>
-                    <Input id="address" type="text" required :tabindex="9" autocomplete="street-address"
-                        v-model="form.address" placeholder="Address" />
-                    <InputError :message="form.errors.address" />
+                <div class="text-center text-sm text-muted-foreground">
+                    Already have an account?
+                    <TextLink :href="route('login')" class="underline underline-offset-4" :tabindex="16">Log in</TextLink>
                 </div>
-
-        
-                <div class="grid gap-2">
-                    <Label for="valid_id">Valid ID</Label>
-                    <Input id="valid_id" type="file" accept="image/*" required :tabindex="10"
-                        @change="form.valid_id = $event.target.files[0]" />
-                    <InputError :message="form.errors.valid_id" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="phone_number">Phone number</Label>
-                    <Input id="phone_number" type="tel" required :tabindex="11" autocomplete="tel"
-                        v-model="form.phone_number" placeholder="+63 912 345 6789" />
-                
-                    <InputError :message="form.errors.phone_number" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="email_address">Email address</Label>
-                    <Input id="email_address" type="email" required :tabindex="12" autocomplete="email"
-                        v-model="form.email_address" placeholder="email@example.com" />
-                    <!-- For phone number verification -->
-
-                    <InputError :message="form.errors.email_address" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="password">Password</Label>
-                    <Input id="password" type="password" required :tabindex="13" autocomplete="new-password"
-                        v-model="form.password" placeholder="Password" />
-                    <InputError :message="form.errors.password" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="password_confirmation">Confirm password</Label>
-                    <Input id="password_confirmation" type="password" required :tabindex="14" autocomplete="new-password"
-                        v-model="form.password_confirmation" placeholder="Confirm password" />
-                    <InputError :message="form.errors.password_confirmation" />
-                </div>
-
-                <Button type="submit" class="mt-2 w-full" :tabindex="15" :disabled="form.processing">
-                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                    <span v-else>Create account</span>
-                </Button>
-            </div>
-
-            <div class="text-center text-sm text-muted-foreground">
-                Already have an account?
-                <TextLink :href="route('login')" class="underline underline-offset-4" :tabindex="16">Log in</TextLink>
-            </div>
-        </form>
-    </AuthBase>
-</template>
+            </form>
+        </AuthBase>
+    </template>

@@ -26,14 +26,15 @@ class PasswordResetLinkController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
+    
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'email_address' => 'required|email',
         ]);
 
         Password::sendResetLink(
-            $request->only('email')
+            $request->only('email_address')
         );
 
         return back()->with('status', __('A reset link will be sent if the account exists.'));
