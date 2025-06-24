@@ -134,5 +134,11 @@ class User extends Authenticatable
         return $this->hasOne(Staff::class);
     }
 
+    public function getEmailForPasswordReset()
+{
+    return $this->email_address;
+}
+
+
 
 }

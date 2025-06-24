@@ -9,14 +9,14 @@ import { LoaderCircle } from 'lucide-vue-next';
 
 interface Props {
     token: string;
-    email: string;
+    email_address: string;
 }
 
 const props = defineProps<Props>();
 
 const form = useForm({
     token: props.token,
-    email: props.email,
+    email_address: props.email_address,
     password: '',
     password_confirmation: '',
 });
@@ -37,9 +37,9 @@ const submit = () => {
         <form @submit.prevent="submit">
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="email">Email</Label>
-                    <Input id="email" type="email" name="email" autocomplete="email" v-model="form.email" class="mt-1 block w-full" readonly />
-                    <InputError :message="form.errors.email" class="mt-2" />
+                    <Label for="email_address">Email Address</Label>
+                    <Input id="email_address" type="email" name="email_address" autocomplete="email_address" v-model="form.email_address" class="mt-1 block w-full" readonly />
+                    <InputError :message="form.errors.email_address" class="mt-2" />
                 </div>
 
                 <div class="grid gap-2">
