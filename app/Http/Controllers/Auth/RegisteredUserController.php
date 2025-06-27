@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Patient;
-use App\Models\Dentist;
-use App\Models\Staff;
-use App\Models\Owner;
+use App\Models\Users\User;
+use App\Models\Users\Patient;
+use App\Models\Users\Dentist;
+use App\Models\Users\Staff;
+use App\Models\Users\Owner;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

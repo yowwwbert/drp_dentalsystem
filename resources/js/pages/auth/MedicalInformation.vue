@@ -18,6 +18,7 @@ const form = useForm({
   physician_specialty: '',
   under_medication: 'false', // stored as string initially
   congenital_abnormalities: 'false',
+  data_privacy_agreement: false,
 });
 
 const submit = () => {
@@ -107,7 +108,25 @@ const submit = () => {
         </div>
         <InputError :message="form.errors.congenital_abnormalities" />
       </div>
-
+  <div class="grid gap-2">
+    <label for="data_privacy_agreement" class="flex items-start gap-2 cursor-pointer italic text-sm text-justify">
+      <input
+        type="checkbox"
+        id="data_privacy_agreement"
+        v-model="form.data_privacy_agreement"
+        required
+        :tabindex="22"
+        class="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+      />
+      <span>
+        By registering, you consent to <strong>DRP Dental Clinic</strong> collecting, storing, and processing your personal information (e.g., name, contact details, dental and medical history, and identification) for dental care, administrative, diagnostic, and communication purposes.<br>
+        <span class="mt-2 block">
+          Your data will be protected under the <strong>Data Privacy Act of 2012 (RA 10173)</strong> and accessed only by authorized personnel. You may access, correct, or withdraw your data at any time, subject to applicable laws.
+        </span>
+      </span>
+    </label>
+  </div>
+  <InputError :message="form.errors.data_privacy_agreement" />
       <Button type="submit" class="mt-2 w-full" :disabled="form.processing">
         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
         <span v-else>Submit</span>

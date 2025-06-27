@@ -20,7 +20,9 @@ return new class extends Migration
             $table->string('billing_id', 50)->nullable()->comment('ID of the billing record, if applicable');
             $table->enum('status', ['Scheduled', 'Completed', 'Cancelled', 'No Show'])->default('Scheduled')->comment('Status of the appointment');
             $table->text('notes')->nullable()->comment('Additional notes for the appointment');
-            $table->string('status_changed_by', 50)->comment('ID of the user who changed thje status of the appointment');
+            $table->string('status_changed_by', 50)->comment('ID of the user who changed the status of the appointment');
+            $table->timestamp('status_changed_at')->nullable()->comment('Timestamp when the status was changed');
+            $table->text('reason_for_status_change')->nullable()->comment('Reason for changing the status of the appointment');
             $table->string('appointment_created_by', 50)->comment('ID of the user who created the appointment');
 
             $table->foreign('patient_id')

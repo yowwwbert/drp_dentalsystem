@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\PatientDetails;
 
+use App\Models\Users\Patient;
 use Illuminate\Database\Eloquent\Model;
 
 class MedicalInformation extends Model

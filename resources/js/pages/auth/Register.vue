@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import InputError from '../../components/InputError.vue';
-import TextLink from '../../components/TextLink.vue';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import AuthBase from '../../layouts/AuthLayout.vue';
+import InputError from '@/components/InputError.vue';
+import TextLink from '@/components/TextLink.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthBase from '@/layouts/AuthLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
@@ -28,6 +28,11 @@ const form = useForm({
     valid_id: null,
     password: '',
     password_confirmation: '',
+    guardian_first_name: '',
+    guardian_last_name: '',
+    guardian_relationship: '',
+    guardian_phone_number: '',
+    guardian_email_address: '',
 });
 
 // Password strength checker
@@ -43,6 +48,7 @@ const passwordConditions = ref({
 const isPasswordValid = computed(() => {
     return Object.values(passwordConditions.value).every(condition => condition);
 });
+
 
 // Watch password and update conditions
 watch(() => form.password, (newPassword) => {
@@ -95,25 +101,30 @@ const submit = () => {
         },
     });
 };
+
+// Check if user is under 18
+const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 </script>
 
 <template>
     <AuthBase title="Create an account" description="Enter your details below to create your account">
+
         <Head title="Register" />
 
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
+                <span class="text-red-600 italic text-sm">Fields marked with an asterisk (*) are required.</span>
                 <!-- Name fields in a grid -->
-                 <h1>Personal Information</h1>
-                <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
+                <h1>Personal Information</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="grid gap-2">
-                        <Label for="first_name">First Name</Label>
+                        <Label for="first_name">First Name <span class="text-red-600">*</span></Label>
                         <Input id="first_name" type="text" required autofocus :tabindex="1" autocomplete="given-name"
                             v-model="form.first_name" placeholder="First Name" />
                         <InputError :message="form.errors.first_name" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="last_name">Last Name</Label>
+                        <Label for="last_name">Last Name <span class="text-red-600">*</span></Label>
                         <Input id="last_name" type="text" required :tabindex="2" autocomplete="family-name"
                             v-model="form.last_name" placeholder="Last Name" />
                         <InputError :message="form.errors.last_name" />
@@ -121,7 +132,7 @@ const submit = () => {
                 </div>
 
                 <div class="grid gap-2">
-                    <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="grid gap-2">
                             <Label for="middle_name">Middle Name</Label>
                             <Input id="middle_name" type="text" :tabindex="3" autocomplete="additional-name"
@@ -133,7 +144,7 @@ const submit = () => {
                             <select id="suffix" :tabindex="4" v-model="form.suffix"
                                 class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 autocomplete="honorific-suffix">
-                                <option value="" disabled selected>--</option>
+                                <option value="" selected>--</option>
                                 <option value="Jr.">Jr.</option>
                                 <option value="Sr.">Sr.</option>
                                 <option value="II">II</option>
@@ -141,22 +152,21 @@ const submit = () => {
                                 <option value="IV">IV</option>
                                 <option value="V">V</option>
                             </select>
-                            <InputError :message="form.errors.suffix" />
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div class="grid gap-2">
-                        <Label for="birth_date">Birth Date</Label>
+                        <Label for="birth_date">Birth Date <span class="text-red-600">*</span></Label>
                         <Input id="birth_date" type="date" required :tabindex="5" autocomplete="bday"
                             v-model="form.birth_date" @change="computeAge" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="sex">Sex</Label>
-                        <select name="sex" id="sex" required :tabindex="6" v-model="form.sex"
+                        <Label for="gender">Gender <span class="text-red-600">*</span></Label>
+                        <select name="gender" id="gender" required :tabindex="6" v-model="form.sex"
                             class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                             <option value="" disabled selected>--</option>
                             <option value="Male">Male</option>
@@ -168,98 +178,155 @@ const submit = () => {
 
                     <div class="grid gap-2">
                         <Label for="religion">Religion</Label>
-                        <Input id="religion" type="text" required :tabindex="7" autocomplete="off"
+                        <Input id="religion" type="text" :tabindex="7" autocomplete="off"
                             v-model="form.religion" placeholder="Religion" />
                         <InputError :message="form.errors.religion" />
                     </div>
                 </div>
 
+
+
                 <div class="grid gap-2" v-if="form.user_type === 'Patient'">
                     <Label for="occupation">Occupation</Label>
                     <Input id="occupation" type="text" required :tabindex="8" autocomplete="off"
                         v-model="form.occupation" placeholder="Occupation" />
-                        <InputError :message="form.errors.occupation" />
+                    <InputError :message="form.errors.occupation" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="address">Address <span class="text-red-600">*</span></Label>
+                    <Input id="address" type="text" required :tabindex="9" autocomplete="street-address"
+                        v-model="form.address" placeholder="Address" />
+                    <InputError :message="form.errors.address" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="valid_id">Valid ID <span class="text-red-600">*</span></Label>
+                    <Input id="valid_id" type="file" accept="image/*" :tabindex="10"
+                        @change="form.valid_id = $event.target.files[0]" />
+                    <InputError :message="form.errors.valid_id" />
+                </div>
+
+                <div v-if="isUnder18" class="grid gap-6">
+                    <div class="grid gap-2">
+                        <h1>Guardian Details</h1>
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="address">Address</Label>
-                        <Input id="address" type="text" required :tabindex="9" autocomplete="street-address"
-                            v-model="form.address" placeholder="Address" />
-                        <InputError :message="form.errors.address" />
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid gap-2">
+                            <Label for="guardian_first_name">Guardian First Name <span class="text-red-600">*</span></Label>
+                            <Input id="guardian_first_name" type="text" required :tabindex="17"
+                                autocomplete="given-name" v-model="form.guardian_first_name"
+                                placeholder="Guardian First Name" />
+                            <InputError :message="form.errors.guardian_first_name" />
+                        </div>
 
-                    <div class="grid gap-2">
-                        <Label for="valid_id">Valid ID</Label>
-                        <Input id="valid_id" type="file" accept="image/*" :tabindex="10"
-                            @change="form.valid_id = $event.target.files[0]" />
-                        <InputError :message="form.errors.valid_id" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <h1>Account Information</h1>
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="phone_number">Phone number</Label>
-                        <Input id="phone_number" type="tel" required :tabindex="11" autocomplete="tel"
-                            v-model="form.phone_number" placeholder="+63 912 345 6789" />
-                        <InputError :message="form.errors.phone_number" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="email_address">Email address</Label>
-                        <Input id="email_address" type="email" required :tabindex="12" autocomplete="email"
-                            v-model="form.email_address" placeholder="email@example.com" />
-                        <InputError :message="form.errors.email_address" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="password">Password</Label>
-                        <Input id="password" type="password" required :tabindex="13" autocomplete="new-password"
-                            v-model="form.password" placeholder="Password" @focus="isPasswordFocused = true"
-    @blur="isPasswordFocused = false"/>
-                        <InputError :message="form.errors.password" />
-                        <!-- Password Strength Checker -->
-                        <div v-if="isPasswordFocused" class="text-sm text-gray-600 mt-2 ">
-                            <p>Password must include:</p>
-                            <ul class="list-disc pl-5">
-                                <li :class="passwordConditions.length ? 'text-green-600' : 'text-red-600'">
-                                    At least 8 characters
-                                </li>
-                                <li :class="passwordConditions.uppercase ? 'text-green-600' : 'text-red-600'">
-                                    At least one uppercase letter
-                                </li>
-                                <li :class="passwordConditions.lowercase ? 'text-green-600' : 'text-red-600'">
-                                    At least one lowercase letter
-                                </li>
-                                <li :class="passwordConditions.number ? 'text-green-600' : 'text-red-600'">
-                                    At least one number
-                                </li>
-                                <li :class="passwordConditions.special ? 'text-green-600' : 'text-red-600'">
-                                    At least one special character
-                                </li>
-                            </ul>
-                            <p v-if="isPasswordValid" class="text-green-600 font-semibold">Password meets all requirements!</p>
+                        <div class="grid gap-2">
+                            <Label for="guardian_last_name">Guardian Last Name <span class="text-red-600">*</span></Label>
+                            <Input id="guardian_last_name" type="text" required :tabindex="18"
+                                autocomplete="family-name" v-model="form.guardian_last_name"
+                                placeholder="Guardian Last Name" />
+                            <InputError :message="form.errors.guardian_last_name" />
                         </div>
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="password_confirmation">Confirm password</Label>
-                        <Input id="password_confirmation" type="password" required :tabindex="14" autocomplete="new-password"
-                            v-model="form.password_confirmation" placeholder="Confirm password" />
-                        <InputError :message="form.errors.password_confirmation" />
+                        <Label for="guardian_relationship">Relationship to Guardian <span class="text-red-600">*</span></Label>
+                        <Input id="guardian_relationship" type="text" required :tabindex="19"
+                            v-model="form.guardian_relationship" placeholder="Relationship to Guardian" />
+                        <InputError :message="form.errors.guardian_relationship" />
                     </div>
 
-                    <Button type="submit" class="mt-2 w-full" :tabindex="15" :disabled="form.processing">
-                        <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                        <span v-else>Create account</span>
-                    </Button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid gap-2">
+                            <Label for="guardian_phone_number">Guardian Phone Number <span class="text-red-600">*</span></Label>
+                            <Input id="guardian_phone_number" type="tel" required :tabindex="20" autocomplete="tel"
+                                v-model="form.guardian_phone_number" placeholder="+63 912 345 6789" />
+                            <InputError :message="form.errors.guardian_phone_number" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="guardian_email_address">Guardian Email Address <span class="text-red-600">*</span></Label>
+                            <Input id="guardian_email_address" type="email" required :tabindex="21" autocomplete="email"
+                                v-model="form.guardian_email_address" placeholder="guardian@example.com" />
+                            <InputError :message="form.errors.guardian_email_address" />
+                        </div>
+                    </div>
                 </div>
 
-                <div class="text-center text-sm text-muted-foreground">
-                    Already have an account?
-                    <TextLink :href="route('login')" class="underline underline-offset-4" :tabindex="16">Log in</TextLink>
+
+                <div class="grid gap-2">
+                    <h1>Account Information</h1>
                 </div>
-            </form>
-        </AuthBase>
-    </template>
+
+                <div class="grid gap-2">
+                    <Label for="phone_number">Phone number <span class="text-red-600">*</span></Label>
+                    <Input id="phone_number" type="tel" required :tabindex="11" autocomplete="tel"
+                        v-model="form.phone_number" placeholder="+63 912 345 6789" />
+                    <InputError :message="form.errors.phone_number" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="email_address">Email Address <span class="text-red-600">*</span></Label>
+                    <Input id="email_address" type="email" required :tabindex="12" autocomplete="email_address"
+                        v-model="form.email_address" placeholder="email@example.com" />
+                    <InputError :message="form.errors.email_address" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="password">Password <span class="text-red-600">*</span></Label>
+                    <Input id="password" type="password" required :tabindex="13" autocomplete="new-password"
+                        v-model="form.password" placeholder="Password" @focus="isPasswordFocused = true"
+                        @blur="isPasswordFocused = false" />
+                    <InputError :message="form.errors.password" />
+                    <!-- Password Strength Checker -->
+                    <div v-if="isPasswordFocused" class="text-sm text-gray-600 mt-2 ">
+                        <p>Password must include:</p>
+                        <ul class="list-disc pl-5">
+                            <li
+                                :class="{ 'text-green-600': passwordConditions.length, 'text-red-600': !passwordConditions.length }">
+                                At least 8 characters
+                            </li>
+                            <li
+                                :class="{ 'text-green-600': passwordConditions.uppercase, 'text-red-600': !passwordConditions.uppercase }">
+                                At least one uppercase letter
+                            </li>
+                            <li
+                                :class="{ 'text-green-600': passwordConditions.lowercase, 'text-red-600': !passwordConditions.lowercase }">
+                                At least one lowercase letter
+                            </li>
+                            <li
+                                :class="{ 'text-green-600': passwordConditions.number, 'text-red-600': !passwordConditions.number }">
+                                At least one number
+                            </li>
+                            <li
+                                :class="{ 'text-green-600': passwordConditions.special, 'text-red-600': !passwordConditions.special }">
+                                At least one special character
+                            </li>
+                        </ul>
+                        <p v-if="isPasswordValid" class="text-green-600 font-semibold">Password meets all requirements!
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="password_confirmation">Confirm password <span class="text-red-600">*</span></Label>
+                    <Input id="password_confirmation" type="password" required :tabindex="14"
+                        autocomplete="new-password" v-model="form.password_confirmation"
+                        placeholder="Confirm password" />
+                    <InputError :message="form.errors.password_confirmation" />
+                </div>
+
+                <Button type="submit" class="mt-2 w-full" :tabindex="15" :disabled="form.processing">
+                    <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
+                    <span v-else>Create account</span>
+                </Button>
+            </div>
+
+            <div class="text-center text-sm text-muted-foreground">
+                Already have an account?
+                <TextLink :href="route('login')" class="underline underline-offset-4" :tabindex="16">Log in</TextLink>
+            </div>
+        </form>
+    </AuthBase>
+</template>

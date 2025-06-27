@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use Illuminate\Http\Request;
-use App\Models\Patient;
-use App\Models\MedicalInformation;
+use App\Models\Users\Patient;
+use App\Models\PatientDetails\MedicalInformation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use App\Http\Controllers\Controller;

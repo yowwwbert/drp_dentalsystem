@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('guardians', function (Blueprint $table) {
             $table->string('guardian_id', 50)->primary();
-            $table->string('guardian_name')->nullable();
+            $table->string('guardian_first_name')->nullable();
+            $table->string('guardian_last_name')->nullable();
             $table->string('guardian_relationship')->nullable();
             $table->string('guardian_phone_number')->unique()->nullable();
+            $table->string('guardian_email_address')->unique()->nullable();
             $table->timestamps();
         });
     }
