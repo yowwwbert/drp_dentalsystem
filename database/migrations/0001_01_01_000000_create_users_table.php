@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('religion')->nullable();
             $table->string('sex')->nullable();
             $table->string('occupation')->nullable();
-            $table->string('email_address')->unique();
+            $table->string('email_address')->unique()->nullable();
             $table->string('phone_number')->nullable();
             $table->string('address')->nullable();
             $table->enum('user_type', ['Owner', 'Dentist', 'Staff', 'Patient'])->default('Patient');
