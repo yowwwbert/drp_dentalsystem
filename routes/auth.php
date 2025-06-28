@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Auth\PhoneVerificationNotificationController;
 use App\Http\Controllers\Auth\PhoneVerificationPromptController;
+use App\Http\Controllers\Auth\VerifyPhoneController;
 use App\Http\Controllers\Auth\PatientMedicalInfoController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,12 +53,13 @@ Route::middleware('auth')->group(function () {
 
     Route::get('phone/verification-notification', [PhoneVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
-        ->name('phone.verification.notification');
+        ->name('phone.verification.send');
 
     Route::get('verify-phone', PhoneVerificationPromptController::class)
-        ->name('phone.verify');
+        ->name('phone.notice');
 
-    
+    Route::post('phone/verify', [VerifyPhoneController::class, '__invoke'])->name('phone.verify')->middleware(['auth', 'throttle:6,1']);
+
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
 

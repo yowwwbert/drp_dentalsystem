@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
@@ -14,16 +15,37 @@ class PhoneVerificationNotificationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->phone_verified_at) {
+        if ($user->hasVerifiedPhone()) {
+            Log::info('Phone already verified, skipping OTP resend', [
+                'user_id' => $user->user_id,
+                'timestamp' => now()->toDateTimeString(),
+            ]);
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
-        // Generate 6-digit code
-        $code = random_int(100000, 999999);
+        // Log resend attempt
+        Log::info('New OTP for', [
+            'user_id' => $user->user_id,
+        ]);
 
-        return back()->with('status', 'phone-verification-code-sent');
+        try {
+            $user->sendPhoneVerificationNotification();
+            $request->session()->put('verification_otp_sent', true);
+            Log::info('OTP resent successfully', [
+                'user_id' => $user->user_id,
+                'phone_number' => $user->phone_number,
+                'timestamp' => now()->toDateTimeString(),
+            ]);
+            return back()->with('status', 'phone-verification-code-sent');
+        } catch (\Exception $e) {
+            Log::error('Failed to resend OTP', [
+                'user_id' => $user->user_id,
+                'error' => $e->getMessage(),
+                'timestamp' => now()->toDateTimeString(),
+            ]);
+            return back()->withErrors(['otp' => 'Failed to resend OTP.']);
+        }
     }
-
     public function verify(Request $request): RedirectResponse
     {
         $user = $request->user();

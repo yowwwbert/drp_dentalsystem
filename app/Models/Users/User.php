@@ -3,6 +3,8 @@
 namespace App\Models\Users;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -139,6 +141,23 @@ class User extends Authenticatable
     return $this->email_address;
 }
 
+public function sendPhoneVerificationNotification()
+    {
+        $phone = $this->user_type === 'Patient' && $this->age < 18 && $this->guardian_phone_number
+            ? $this->guardian_phone_number
+            : $this->phone_number;
+
+        // Generate 6-digit OTP
+        $otp = rand(100000, 999999);
+
+        // Store OTP in cache with 10-minute expiration
+        Cache::put('phone_verification_' . $this->user_id, $otp, now()->addMinutes(10));
+
+        // Log OTP instead of sending via SMS
+        Log::info('OTP generated for phone verification', [
+            'otp' => $otp,
+        ]);
+    }
 
 
 }

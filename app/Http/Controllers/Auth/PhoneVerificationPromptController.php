@@ -15,8 +15,16 @@ class PhoneVerificationPromptController extends Controller
      */
     public function __invoke(Request $request): RedirectResponse|Response
     {
+        if (
+            !$request->user()->hasVerifiedPhone() &&
+            !$request->session()->has('verification_otp_sent')
+        ) {
+            $request->user()->sendPhoneVerificationNotification();
+            $request->session()->put('verification_otp_sent', true);
+        }
+
         return $request->user()->hasVerifiedPhone()
-                    ? redirect()->intended(route('dashboard', absolute: false))
-                    : Inertia::render('auth/VerifyPhone', ['status' => $request->session()->get('status')]);
+            ? redirect()->intended(route('dashboard', absolute: false))
+            : Inertia::render('auth/VerifyPhone', ['status' => $request->session()->get('status')]);
     }
 }

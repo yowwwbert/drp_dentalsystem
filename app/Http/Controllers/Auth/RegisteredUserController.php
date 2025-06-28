@@ -51,7 +51,22 @@ class RegisteredUserController extends Controller
             'guardian_relationship'  => 'nullable|string|max:50',
             'guardian_phone_number'  => 'nullable|string|max:20',
             'guardian_email_address' => 'nullable|string|email|max:255',
-            'guardian_valid_id'      => ['file', 'mimes:jpg,jpeg,png,pdf', 'max:2048', 'required_if:user_type,Patient'],
+            'guardian_valid_id'      => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:2048',
+                function ($attribute, $value, $fail) use ($request) {
+                    $hasGuardianDetails = $request->filled('guardian_first_name') ||
+                                          $request->filled('guardian_last_name') ||
+                                          $request->filled('guardian_relationship') ||
+                                          $request->filled('guardian_phone_number') ||
+                                          $request->filled('guardian_email_address');
+                    if ($hasGuardianDetails && !$value) {
+                        $fail('The guardian valid ID is required when guardian details are provided.');
+                    }
+                },
+            ],
         ]);
 
         // Use a transaction for data consistency
@@ -81,22 +96,22 @@ class RegisteredUserController extends Controller
 
             // Create related records based on user_type
             if ($user->user_type === 'Patient') {
-                $validIdPath = $request->file('valid_id')->store('valid_ids', 'public'); // Required for Patient
+                $validIdPath = $request->file('valid_id') ? $request->file('valid_id')->store('valid_ids', 'public') : null;
                 Patient::create([
                     'patient_id'        => $user->user_id,
                     'guardian_id'       => $request->guardian_id,
                     'valid_id'          => $validIdPath,
                     'remaining_balance' => 0,
                 ]);
-                Guardian::create([
-                    'guardian_id'          => $request->guardian_id, // Use user_id if guardian_id is not provided
-                    'guardian_first_name'  => $request->guardian_first_name,
-                    'guardian_last_name'   => $request->guardian_last_name,
-                    'guardian_relationship' => $request->guardian_relationship,
-                    'guardian_phone_number' => $request->guardian_phone_number,
-                    'guardian_email_address'=> $request->guardian_email_address,
-                    'guardian_valid_id'    => $request->file('valid_id')->store('guardians', 'public'),
-                ]);
+                    Guardian::create([
+                        'guardian_id'          => $request->guardian_id ?: $user->user_id, // Fallback to user_id
+                        'guardian_first_name'  => $request->guardian_first_name,
+                        'guardian_last_name'   => $request->guardian_last_name,
+                        'guardian_relationship' => $request->guardian_relationship,
+                        'guardian_phone_number' => $request->guardian_phone_number,
+                        'guardian_email_address'=> $request->guardian_email_address,
+                        'guardian_valid_id'    => $request->file('guardian_valid_id') ? $request->file('guardian_valid_id')->store('guardians', 'public') : null,
+                    ]);
             } elseif ($user->user_type === 'Dentist') {
                 Dentist::create([
                     'dentist_id'        => $user->user_id,

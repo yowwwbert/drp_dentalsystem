@@ -85,9 +85,9 @@ function userContactInformation() {
     }
     // Set empty field to 'N/A' if the other is provided
     if (!form.phone_number && form.email_address) {
-        form.phone_number = 'N/A';
+        form.phone_number = '';
     } else if (!form.email_address && form.phone_number) {
-        form.email_address = 'N/A';
+        form.email_address = '';
     }
     return true;
 }

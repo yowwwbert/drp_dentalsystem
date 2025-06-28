@@ -32,7 +32,7 @@ class PatientMedicalInfoController extends Controller
             'physician_contact' => 'nullable|string|max:20',
             'physician_specialty' => 'nullable|string|max:100',
             'under_medication' => 'required|in:true,false',
-        'congenital_abnormalities' => 'required|in:true,false',
+            'congenital_abnormalities' => 'required|in:true,false',
         ]);
 
         $user = Auth::user();
@@ -50,10 +50,12 @@ class PatientMedicalInfoController extends Controller
             'physician_contact' => $request->physician_contact,
             'physician_specialty' => $request->physician_specialty,
             'under_medication' => $request->under_medication === 'true',
-'congenital_abnormalities' => $request->congenital_abnormalities === 'true',
-
+            'congenital_abnormalities' => $request->congenital_abnormalities === 'true',
         ]);
 
-        return redirect()->route('verification.notice'); // or redirect to dashboard if already verified
+        // Redirect based on email_address presence
+        return $user->email_address
+            ? redirect()->route('verification.notice')
+            : redirect()->route('phone.notice');
     }
 }
