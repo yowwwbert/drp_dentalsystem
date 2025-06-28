@@ -19,11 +19,11 @@ return new class extends Migration
 
             $table->foreign('dentist_id')
                 ->references('dentist_id')
-                ->on('dentist')
+                ->on('dentists')
                 ->onDelete('cascade');
             $table->foreign('schedule_id')
                 ->references('schedule_id')
-                ->on('schedule')
+                ->on('schedules')
                 ->onDelete('cascade');
         });
     }

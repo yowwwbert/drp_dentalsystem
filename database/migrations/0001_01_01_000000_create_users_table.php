@@ -25,7 +25,6 @@ return new class extends Migration
             $table->enum('user_type', ['Owner', 'Dentist', 'Staff', 'Patient'])->default('Patient');
             $table->string('status')->default('Active');
             $table->string('profile_picture')->nullable()->default('default.jpg');
-            $table->string('valid_id');
             $table->string('password')->nullable();
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();

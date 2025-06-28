@@ -33,6 +33,7 @@ const form = useForm({
     guardian_relationship: '',
     guardian_phone_number: '',
     guardian_email_address: '',
+    guardian_valid_id: null
 });
 
 // Password strength checker
@@ -115,6 +116,19 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
             <div class="grid gap-6">
                 <span class="text-red-600 italic text-sm">Fields marked with an asterisk (*) are required.</span>
                 <!-- Name fields in a grid -->
+                <div class="grid gap-2">
+                    <Label for="user_type">User Type</Label>
+                    <select id="user_type" v-model="form.user_type" @change="userOccupation"
+                        class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        :tabindex="0">
+                        <option value="Patient">Patient</option>
+                        <option value="Owner">Owner</option>
+                        <option value="Dentist">Dentist</option>
+                        <option value="Staff">Staff</option>
+                    </select>
+                    <InputError :message="form.errors.user_type" />
+
+                </div>
                 <h1>Personal Information</h1>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="grid gap-2">
@@ -178,8 +192,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                     <div class="grid gap-2">
                         <Label for="religion">Religion</Label>
-                        <Input id="religion" type="text" :tabindex="7" autocomplete="off"
-                            v-model="form.religion" placeholder="Religion" />
+                        <Input id="religion" type="text" :tabindex="7" autocomplete="off" v-model="form.religion"
+                            placeholder="Religion" />
                         <InputError :message="form.errors.religion" />
                     </div>
                 </div>
@@ -200,9 +214,9 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                     <InputError :message="form.errors.address" />
                 </div>
 
-                <div class="grid gap-2">
+                <div class="grid gap-2" v-if="form.user_type === 'Patient' && !isUnder18">
                     <Label for="valid_id">Valid ID <span class="text-red-600">*</span></Label>
-                    <Input id="valid_id" type="file" accept="image/*" :tabindex="10"
+                    <Input id="valid_id" type="file" required accept="image/*" :tabindex="10"
                         @change="form.valid_id = $event.target.files[0]" />
                     <InputError :message="form.errors.valid_id" />
                 </div>
@@ -214,7 +228,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="guardian_first_name">Guardian First Name <span class="text-red-600">*</span></Label>
+                            <Label for="guardian_first_name">Guardian First Name <span
+                                    class="text-red-600">*</span></Label>
                             <Input id="guardian_first_name" type="text" required :tabindex="17"
                                 autocomplete="given-name" v-model="form.guardian_first_name"
                                 placeholder="Guardian First Name" />
@@ -222,7 +237,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="guardian_last_name">Guardian Last Name <span class="text-red-600">*</span></Label>
+                            <Label for="guardian_last_name">Guardian Last Name <span
+                                    class="text-red-600">*</span></Label>
                             <Input id="guardian_last_name" type="text" required :tabindex="18"
                                 autocomplete="family-name" v-model="form.guardian_last_name"
                                 placeholder="Guardian Last Name" />
@@ -231,7 +247,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="guardian_relationship">Relationship to Guardian <span class="text-red-600">*</span></Label>
+                        <Label for="guardian_relationship">Relationship to Guardian <span
+                                class="text-red-600">*</span></Label>
                         <Input id="guardian_relationship" type="text" required :tabindex="19"
                             v-model="form.guardian_relationship" placeholder="Relationship to Guardian" />
                         <InputError :message="form.errors.guardian_relationship" />
@@ -239,18 +256,27 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="guardian_phone_number">Guardian Phone Number <span class="text-red-600">*</span></Label>
+                            <Label for="guardian_phone_number">Guardian Phone Number <span
+                                    class="text-red-600">*</span></Label>
                             <Input id="guardian_phone_number" type="tel" required :tabindex="20" autocomplete="tel"
                                 v-model="form.guardian_phone_number" placeholder="+63 912 345 6789" />
                             <InputError :message="form.errors.guardian_phone_number" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="guardian_email_address">Guardian Email Address <span class="text-red-600">*</span></Label>
+                            <Label for="guardian_email_address">Guardian Email Address <span
+                                    class="text-red-600">*</span></Label>
                             <Input id="guardian_email_address" type="email" required :tabindex="21" autocomplete="email"
                                 v-model="form.guardian_email_address" placeholder="guardian@example.com" />
                             <InputError :message="form.errors.guardian_email_address" />
                         </div>
+                        
+                    </div>
+                    <div class="grid gap-2" v-if="form.user_type === 'Patient'">
+                            <Label for="guardian_valid_id">Valid ID <span class="text-red-600">*</span></Label>
+                            <Input id="guardian_valid_id" type="file" required accept="image/*" :tabindex="10"
+                                @change="form.guardian_valid_id = $event.target.files[0]" />
+                            <InputError :message="form.errors.guardian_valid_id" />
                     </div>
                 </div>
 

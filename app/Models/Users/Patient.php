@@ -13,6 +13,7 @@ class Patient extends Model
 
     protected $fillable = [
         'patient_id',
+        'valid_id',
         'guardian_id',
         'remaining_balance',
     ];

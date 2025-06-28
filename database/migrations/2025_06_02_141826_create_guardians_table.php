@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('guardian_relationship')->nullable();
             $table->string('guardian_phone_number')->unique()->nullable();
             $table->string('guardian_email_address')->unique()->nullable();
+            $table->string('guardian_valid_id')->nullable();
             $table->timestamps();
         });
     }

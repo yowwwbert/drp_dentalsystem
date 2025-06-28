@@ -21,7 +21,7 @@ return new class extends Migration
                 ->onDelete('cascade');
             $table->foreign('branch_id')
                 ->references('branch_id')
-                ->on('branch')
+                ->on('branches')
                 ->onDelete('cascade'); 
             $table->timestamps();
         });

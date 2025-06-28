@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->string('patient_id', 50)->primary();
+            $table->string('valid_id');
             $table->string('guardian_id')->nullable();
             $table->foreign('guardian_id')
                 ->references('guardian_id')
