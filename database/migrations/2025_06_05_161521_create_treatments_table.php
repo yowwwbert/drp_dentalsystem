@@ -16,9 +16,9 @@ return new class extends Migration
             $table->string('treatment_name');
             $table->string('treatment_type', 50);
             $table->integer('treatment_duration')->nullable()->comment('Duration in minutes');
-            $table->text('description')->nullable();
-            $table->decimal('cost', 10, 2)->default(0.00);
-            
+            $table->text('treatment_description')->nullable();
+            $table->decimal('treatment_cost', 10, 2)->default(0.00);
+            $table->boolean('is_active')->default(true)->comment('Indicates if the treatment is currently active');
             $table->timestamps();
         });
     }

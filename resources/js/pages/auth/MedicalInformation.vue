@@ -9,6 +9,11 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 
+defineProps<{
+  phone_number?: string | null;
+  email_address?: string | null;
+}>();
+
 const form = useForm({
   previous_dentist: '',
   last_dental_visit: '',

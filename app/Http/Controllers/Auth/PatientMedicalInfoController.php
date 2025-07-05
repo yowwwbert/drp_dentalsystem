@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 use App\Models\Users\Patient;
 use App\Models\PatientDetails\MedicalInformation;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
-use App\Http\Controllers\Controller;
+use Inertia\Inertia;
 
 class PatientMedicalInfoController extends Controller
 {
@@ -16,7 +18,7 @@ class PatientMedicalInfoController extends Controller
      */
     public function create()
     {
-        return inertia('auth/MedicalInformation'); // Make sure this path matches your Vue file
+        return Inertia::render('auth/MedicalInformation');
     }
 
     /**
@@ -41,7 +43,7 @@ class PatientMedicalInfoController extends Controller
         $patient = Patient::where('patient_id', $user->user_id)->firstOrFail();
 
         MedicalInformation::create([
-            'medical_info_id' => (string) Str::uuid(), // Manually generate string-based UUID
+            'medical_info_id' => (string) Str::uuid(),
             'patient_id' => $patient->patient_id,
             'previous_dentist' => $request->previous_dentist,
             'last_dental_visit' => $request->last_dental_visit,
@@ -53,9 +55,15 @@ class PatientMedicalInfoController extends Controller
             'congenital_abnormalities' => $request->congenital_abnormalities === 'true',
         ]);
 
-        // Redirect based on email_address presence
-        return $user->email_address
-            ? redirect()->route('verification.notice')
-            : redirect()->route('phone.notice');
+        // Clear intended URL to prevent redirect loops
+        Session::forget('url.intended');
+
+        // Redirect based on contact details
+        return redirect()->route(
+            $user->email_address ? 'verification.notice' : 'phone.verify'
+        )->with([
+            'has_email' => !empty($user->email_address),
+            'has_phone' => !empty($user->phone_number) || ($user->user_type === 'Patient' && !empty($user->guardian_phone_number)),
+        ])->with('success', 'Medical information saved. Please verify your account.');
     }
 }

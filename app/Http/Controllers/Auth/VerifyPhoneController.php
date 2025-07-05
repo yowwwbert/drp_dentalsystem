@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,7 @@ class VerifyPhoneController extends Controller
 
             // Fire Verified event
             event(new Verified($user));
+            Auth::login($user);
 
             Log::info('Phone verified successfully', [
                 'user_id' => $user->user_id,

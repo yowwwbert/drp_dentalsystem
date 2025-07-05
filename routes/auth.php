@@ -39,26 +39,29 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    
-    Route::get('verify-email', EmailVerificationPromptController::class)
+
+    Route::get('verify-email', EmailVerificationPromptController::class) //Renders the email verification page and sends the verification link
         ->name('verification.notice');
-        
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class) //Check if verified 
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
 
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store']) //Resend din
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
-    Route::get('phone/verification-notification', [PhoneVerificationNotificationController::class, 'store'])
-        ->middleware('throttle:6,1')
-        ->name('phone.verification.send');
+    Route::get('verify-phone', [PhoneVerificationPromptController::class, '__invoke']) //Page ng phone verification
+        ->name('phone.verification.notice')
+        ->middleware('auth');
 
-    Route::get('verify-phone', PhoneVerificationPromptController::class)
-        ->name('phone.notice');
+    Route::post('phone/verify', [VerifyPhoneController::class, '__invoke']) //Check ng OTP
+        ->name('phone.verify.store')
+        ->middleware(['auth', 'throttle:6,1']);
 
-    Route::post('phone/verify', [VerifyPhoneController::class, '__invoke'])->name('phone.verify')->middleware(['auth', 'throttle:6,1']);
+    Route::post('phone/verification-notification', [PhoneVerificationNotificationController::class, 'store']) //To resend ang OTP sa phone number
+        ->middleware(['auth', 'throttle:6,1'])
+        ->name('phone.verification.notification');
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');
@@ -68,9 +71,9 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 
-    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create'])
+    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create']) //Page ng medical
         ->name('medical-information');
 
-    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store'])
+    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store']) //Save ng medical
         ->name('medical-information.store');
 });

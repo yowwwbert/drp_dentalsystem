@@ -40,23 +40,36 @@ const form = useForm({
 
 // Password strength checker
 const passwordConditions = ref({
-    length: false, // At least 8 characters
-    uppercase: false, // At least one uppercase letter
-    lowercase: false, // At least one lowercase letter
-    number: false, // At least one number
-    special: false, // At least one special character
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false,
 });
 
-// Check if all conditions are met
 const isPasswordValid = computed(() => {
     return Object.values(passwordConditions.value).every(condition => condition);
 });
 
 const phoneRegex = /^(\+63|0)\d{10}$/;
-const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; // Basic email validation regex
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isPasswordFocused = ref(false);
+
+// Reset valid_id and guardian fields for non-Patient users
+watch(() => form.user_type, (newValue) => {
+    if (newValue !== 'Patient') {
+        form.valid_id = null;
+        form.guardian_first_name = '';
+        form.guardian_last_name = '';
+        form.guardian_relationship = '';
+        form.guardian_phone_number = '';
+        form.guardian_email_address = '';
+        form.guardian_valid_id = null;
+    }
+    userOccupation();
+});
 
 function computeAge() {
     if (!form.birth_date) {
@@ -78,12 +91,10 @@ function userOccupation() {
 }
 
 function userContactInformation() {
-    // Ensure at least one of phone_number or email_address is provided
     if (!form.phone_number && !form.email_address) {
         form.errors.contact_information = 'Please provide either a phone number or an email address.';
         return false;
     }
-    // Set empty field to 'N/A' if the other is provided
     if (!form.phone_number && form.email_address) {
         form.phone_number = '';
     } else if (!form.email_address && form.phone_number) {
@@ -106,12 +117,15 @@ watch(() => form.password, (newPassword) => {
     };
 });
 
-
 const submit = () => {
     computeAge();
     userOccupation();
     if (!userContactInformation()) {
         return;
+    }
+    // Ensure valid_id is null for non-Patient users
+    if (form.user_type !== 'Patient') {
+        form.valid_id = null;
     }
     console.log('Submitting form with data:', form.data());
 
@@ -126,19 +140,16 @@ const submit = () => {
     });
 };
 
-// Check if user is under 18
 const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 </script>
 
 <template>
     <AuthBase title="Create an account" description="Enter your details below to create your account">
-
         <Head title="Register" />
 
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <span class="text-red-600 italic text-sm">Fields marked with an asterisk (*) are required.</span>
-                <!-- Name fields in a grid -->
                 <div class="grid gap-2">
                     <Label for="user_type">User Type</Label>
                     <select id="user_type" v-model="form.user_type" @change="userOccupation"
@@ -150,8 +161,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         <option value="Staff">Staff</option>
                     </select>
                     <InputError :message="form.errors.user_type" />
-
                 </div>
+
                 <h1>Personal Information</h1>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="grid gap-2">
@@ -221,8 +232,6 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                     </div>
                 </div>
 
-
-
                 <div class="grid gap-2" v-if="form.user_type === 'Patient'">
                     <Label for="occupation">Occupation</Label>
                     <Input id="occupation" type="text" required :tabindex="8" autocomplete="off"
@@ -240,7 +249,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                 <div class="grid gap-2" v-if="form.user_type === 'Patient' && !isUnder18">
                     <Label for="valid_id">Valid ID <span class="text-red-600">*</span></Label>
                     <Input id="valid_id" type="file" required accept="image/*" :tabindex="10"
-                        @change="form.valid_id = $event.target.files[0]" />
+                        @change="form.valid_id = $event.target.files[0] || null" />
                     <InputError :message="form.errors.valid_id" />
                 </div>
 
@@ -251,8 +260,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="guardian_first_name">Guardian First Name <span
-                                    class="text-red-600">*</span></Label>
+                            <Label for="guardian_first_name">Guardian First Name <span class="text-red-600">*</span></Label>
                             <Input id="guardian_first_name" type="text" required :tabindex="11"
                                 autocomplete="given-name" v-model="form.guardian_first_name"
                                 placeholder="Guardian First Name" />
@@ -260,8 +268,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="guardian_last_name">Guardian Last Name <span
-                                    class="text-red-600">*</span></Label>
+                            <Label for="guardian_last_name">Guardian Last Name <span class="text-red-600">*</span></Label>
                             <Input id="guardian_last_name" type="text" required :tabindex="12"
                                 autocomplete="family-name" v-model="form.guardian_last_name"
                                 placeholder="Guardian Last Name" />
@@ -270,8 +277,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="guardian_relationship">Relationship to Guardian <span
-                                class="text-red-600">*</span></Label>
+                        <Label for="guardian_relationship">Relationship to Guardian <span class="text-red-600">*</span></Label>
                         <Input id="guardian_relationship" type="text" required :tabindex="13"
                             v-model="form.guardian_relationship" placeholder="Relationship to Guardian" />
                         <InputError :message="form.errors.guardian_relationship" />
@@ -279,30 +285,27 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="grid gap-2">
-                            <Label for="guardian_phone_number">Guardian Phone Number <span
-                                    class="text-red-600">*</span></Label>
+                            <Label for="guardian_phone_number">Guardian Phone Number <span class="text-red-600">*</span></Label>
                             <Input id="guardian_phone_number" type="tel" required :tabindex="14" autocomplete="tel"
                                 v-model="form.guardian_phone_number" placeholder="+63 912 345 6789" />
                             <InputError :message="form.errors.guardian_phone_number" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="guardian_email_address">Guardian Email Address <span
-                                    class="text-red-600">*</span></Label>
+                            <Label for="guardian_email_address">Guardian Email Address <span class="text-red-600">*</span></Label>
                             <Input id="guardian_email_address" type="email" required :tabindex="15" autocomplete="email"
                                 v-model="form.guardian_email_address" placeholder="guardian@example.com" />
                             <InputError :message="form.errors.guardian_email_address" />
                         </div>
-
                     </div>
+
                     <div class="grid gap-2" v-if="form.user_type === 'Patient'">
                         <Label for="guardian_valid_id">Valid ID <span class="text-red-600">*</span></Label>
                         <Input id="guardian_valid_id" type="file" required accept="image/*" :tabindex="16"
-                            @change="form.guardian_valid_id = $event.target.files[0]" />
+                            @change="form.guardian_valid_id = $event.target.files[0] || null" />
                         <InputError :message="form.errors.guardian_valid_id" />
                     </div>
                 </div>
-
 
                 <div class="grid gap-2">
                     <h1>Account Information</h1>
@@ -332,8 +335,8 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                 <div class="grid gap-2">
                     <Label for="email_address">Email Address <span class="text-red-600">*</span></Label>
-                    <Input id="email_address" type="email" :tabindex="18" autocomplete="email_address"
-                        v-model="form.email_address" placeholder="email@example.com" 
+                    <Input id="email_address" type="email" :tabindex="18" autocomplete="email"
+                        v-model="form.email_address" placeholder="email@example.com"
                         @blur="
                             () => {
                                 if (form.email_address && !emailRegex.test(form.email_address)) {
@@ -361,33 +364,26 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         </button>
                     </div>
                     <InputError :message="form.errors.password" />
-                    <!-- Password Strength Checker -->
                     <div v-if="isPasswordFocused || form.password" class="text-sm text-white mt-2">
                         <p>Password must include:</p>
                         <ul class="list-disc pl-5">
-                            <li
-                                :class="{ 'text-green-600': passwordConditions.length, 'text-red-600': !passwordConditions.length }">
+                            <li :class="{ 'text-green-600': passwordConditions.length, 'text-red-600': !passwordConditions.length }">
                                 At least 8 characters
                             </li>
-                            <li
-                                :class="{ 'text-green-600': passwordConditions.uppercase, 'text-red-600': !passwordConditions.uppercase }">
+                            <li :class="{ 'text-green-600': passwordConditions.uppercase, 'text-red-600': !passwordConditions.uppercase }">
                                 At least one uppercase letter
                             </li>
-                            <li
-                                :class="{ 'text-green-600': passwordConditions.lowercase, 'text-red-600': !passwordConditions.lowercase }">
+                            <li :class="{ 'text-green-600': passwordConditions.lowercase, 'text-red-600': !passwordConditions.lowercase }">
                                 At least one lowercase letter
                             </li>
-                            <li
-                                :class="{ 'text-green-600': passwordConditions.number, 'text-red-600': !passwordConditions.number }">
+                            <li :class="{ 'text-green-600': passwordConditions.number, 'text-red-600': !passwordConditions.number }">
                                 At least one number
                             </li>
-                            <li
-                                :class="{ 'text-green-600': passwordConditions.special, 'text-red-600': !passwordConditions.special }">
+                            <li :class="{ 'text-green-600': passwordConditions.special, 'text-red-600': !passwordConditions.special }">
                                 At least one special character
                             </li>
                         </ul>
-                        <p v-if="isPasswordValid" class="text-green-600 font-semibold">Password meets all requirements!
-                        </p>
+                        <p v-if="isPasswordValid" class="text-green-600 font-semibold">Password meets all requirements!</p>
                     </div>
                 </div>
 
