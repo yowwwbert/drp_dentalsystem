@@ -37,6 +37,7 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    user_type: string; // Added for role-based sidebar
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
