@@ -26,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">Appointment Management</h2>
-                <p class="text-gray-600">This page will contain the appointment list and management functionality.</p>
+                <p class="text-gray-600">This page will contain the appointment management functionality.</p>
             </div>
         </div>
     </AppLayout>

@@ -16,17 +16,17 @@ const breadcrumbs: BreadcrumbItem[] = [
 </script>
 
 <template>
-    <Head title="User Profile" />
+    <Head title="Profile" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900">User Profile</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
             </div>
             
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">Profile Management</h2>
-                <p class="text-gray-600">This page will contain the user profile and account management functionality.</p>
+                <p class="text-gray-600">This page will contain the profile management functionality.</p>
             </div>
         </div>
     </AppLayout>

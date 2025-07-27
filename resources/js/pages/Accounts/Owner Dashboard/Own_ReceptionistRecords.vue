@@ -9,10 +9,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
     {
-        title: 'Clinic',
-        href: '/clinic',
-    },
-    {
         title: 'Staff Records',
         href: '/records/staff',
     },
@@ -29,8 +25,8 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
             
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Staff Management</h2>
-                <p class="text-gray-600">This page will contain the staff records and management functionality.</p>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Staff Records Management</h2>
+                <p class="text-gray-600">This page will contain the staff records management functionality.</p>
             </div>
         </div>
     </AppLayout>

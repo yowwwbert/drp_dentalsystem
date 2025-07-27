@@ -26,7 +26,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">Reports Management</h2>
-                <p class="text-gray-600">This page will contain reports generation and management functionality.</p>
+                <p class="text-gray-600">This page will contain the reports management functionality.</p>
             </div>
         </div>
     </AppLayout>

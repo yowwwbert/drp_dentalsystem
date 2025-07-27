@@ -25,8 +25,8 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
             
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Patient Management</h2>
-                <p class="text-gray-600">This page will contain the patient records and management functionality.</p>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Patient Records Management</h2>
+                <p class="text-gray-600">This page will contain the patient records management functionality.</p>
             </div>
         </div>
     </AppLayout>

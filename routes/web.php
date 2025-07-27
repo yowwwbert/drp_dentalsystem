@@ -15,43 +15,43 @@ Route::get('dashboard', function () {
 // Owner Dashboard Routes
 Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/appointments/AppointmentList', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_AppointmentList');
+        return Inertia::render('Accounts/Owner Dashboard/Own_AppointmentList');
     })->name('owner.appointments');
     
     Route::get('/records/PatientRecords', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_PatientRecords');
+        return Inertia::render('Accounts/Owner Dashboard/Own_PatientRecords');
     })->name('owner.patients');
     
     Route::get('/billing/Billing', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_Billing');
+        return Inertia::render('Accounts/Owner Dashboard/Own_Billing');
     })->name('owner.billing');
     
     Route::get('/records/DentistRecords', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_DentistRecords');
+        return Inertia::render('Accounts/Owner Dashboard/Own_DentistRecords');
     })->name('owner.dentists');
     
     Route::get('/records/ReceptionistRecords', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_ReceptionistRecords');
+        return Inertia::render('Accounts/Owner Dashboard/Own_ReceptionistRecords');
     })->name('owner.staff');
     
     Route::get('/clinic/BranchSettings', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_BranchSettings');
+        return Inertia::render('Accounts/Owner Dashboard/Own_BranchSettings');
     })->name('owner.branches');
     
     Route::get('/clinic/ServicesList', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_ServicesList');
+        return Inertia::render('Accounts/Owner Dashboard/Own_ServicesList');
     })->name('owner.services');
     
     Route::get('/data/AppointmentData', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_AppointmentData');
+        return Inertia::render('Accounts/Owner Dashboard/Own_AppointmentData');
     })->name('owner.data');
     
     Route::get('/reports/Reports', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_Reports');
+        return Inertia::render('Accounts/Owner Dashboard/Own_Reports');
     })->name('owner.reports');
     
     Route::get('/records/UserDetails', function () {
-        return Inertia::render('Accounts/Owner Dashboard/O_UserDetails');
+        return Inertia::render('Accounts/Owner Dashboard/Own_UserDetails');
     })->name('owner.profile');
 });
 

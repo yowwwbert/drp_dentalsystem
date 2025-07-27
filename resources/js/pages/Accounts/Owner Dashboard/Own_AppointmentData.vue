@@ -9,8 +9,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
     {
-        title: 'Data',
-        href: '/data',
+        title: 'Appointment Data',
+        href: '/data/appointments',
     },
 ];
 </script>
@@ -25,8 +25,8 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
             
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Data Analytics</h2>
-                <p class="text-gray-600">This page will contain appointment data analytics and reporting functionality.</p>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Appointment Data Management</h2>
+                <p class="text-gray-600">This page will contain the appointment data management functionality.</p>
             </div>
         </div>
     </AppLayout>

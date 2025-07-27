@@ -9,10 +9,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
     {
-        title: 'Clinic',
-        href: '/clinic',
-    },
-    {
         title: 'Branch Settings',
         href: '/clinic/branches',
     },
@@ -29,8 +25,8 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
             
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Branch Management</h2>
-                <p class="text-gray-600">This page will contain the branch settings and management functionality.</p>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Branch Settings Management</h2>
+                <p class="text-gray-600">This page will contain the branch settings management functionality.</p>
             </div>
         </div>
     </AppLayout>
