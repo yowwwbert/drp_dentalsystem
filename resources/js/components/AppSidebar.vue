@@ -38,11 +38,11 @@ const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> =>
   const basePath = `/dashboard/${userType.toLowerCase()}`;
   return {
     Patient: [
-      { name: 'Dashboard', path: `${basePath}`, icon: LayoutDashboard },
+      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
       { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
     ],
     Owner: [
-      { name: 'Dashboard', path: `${basePath}`, icon: LayoutDashboard },
+      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
       { name: 'Patient', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
       { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
       { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
@@ -61,12 +61,12 @@ const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> =>
       { name: 'Reports', path: `${basePath}/reports/Reports`, icon: FileText },
     ],
     Dentist: [
-      { name: 'Dashboard', path: `${basePath}`, icon: LayoutDashboard },
+      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
       { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
       { name: 'Dental Chart', path: `${basePath}/records/dentalChart`, icon: Users },
     ],
     Receptionist: [
-      { name: 'Dashboard', path: `${basePath}`, icon: LayoutDashboard },
+      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
       { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
       { name: 'Patient', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
       { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
@@ -179,49 +179,58 @@ watch(isCollapsed, (newValue) => {
     <div class="flex-1 p-2 mt-4 space-y-2">
       <template v-for="item in menuItems" :key="item.name">
         <div class="relative group" @mouseenter="!isMobile && handleMouseEnter(item.name, $event)" @mouseleave="!isMobile && handleMouseLeave">
-          <div ref="el => menuRefs[item.name] = el" class="flex items-center relative">
-            <template v-if="item.children">
-              <button @click="toggleMenu(item.name)" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-                <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
-                <div :class="['flex-1 transition-all duration-300', (isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto']">
-                  <div class="flex justify-between items-center">
-                    <span>{{ item.name }}</span>
-                    <span v-if="!isCollapsed || isMobile" :class="['transition-transform', openMenus[item.name] ? 'rotate-180' : '']">▼</span>
-                  </div>
-                </div>
-              </button>
-              <!-- Hover Popup for Submenu (Desktop only) -->
-              <div v-if="!isMobile && isCollapsed && hoveredMenu === item.name" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2" @mouseenter="clearHoverTimeout" @mouseleave="handleMouseLeave">
-                <div class="text-white font-semibold px-2 pb-1">{{ item.name }}</div>
-                <div class="mt-1 space-y-1">
-                  <template v-for="sub in item.children" :key="sub.path">
-                    <Link :href="sub.path" :class="['flex items-center gap-2 px-3 py-1.5 rounded-md text-sm', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-                      <span><component :is="sub.icon" :size="20" /></span>
-                      <span>{{ sub.name }}</span>
-                    </Link>
-                  </template>
+          <template v-if="item.children">
+            <!-- Parent menu item with dropdown -->
+            <button @click="toggleMenu(item.name)" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
+              <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
+              <div :class="['flex-1 transition-all duration-300', (isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto']">
+                <div class="flex justify-between items-center">
+                  <span>{{ item.name }}</span>
+                  <span v-if="!isCollapsed || isMobile" :class="['transition-transform duration-200', openMenus[item.name] ? 'rotate-180' : '']">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6,9 12,15 18,9"></polyline>
+                    </svg>
+                  </span>
                 </div>
               </div>
-              <div v-if="(!isCollapsed || isMobile) && openMenus[item.name]" class="ml-6 pl-2 mt-1 space-y-1 border-l-2 border-darkGreen-600">
+            </button>
+            
+            <!-- Dropdown sub-items -->
+            <transition name="dropdown" appear>
+              <div v-if="(!isCollapsed || isMobile) && openMenus[item.name]" class="space-y-1">
                 <template v-for="sub in item.children" :key="sub.path">
-                  <Link :href="sub.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium transition-colors', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
+                  <Link :href="sub.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
+                    <span class="mr-3 flex justify-center"><component :is="sub.icon" :size="18" /></span>
+                    <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">{{ sub.name }}</span>
+                  </Link>
+                </template>
+              </div>
+            </transition>
+            
+            <!-- Hover Popup for Submenu (Desktop only) -->
+            <div v-if="!isMobile && isCollapsed && hoveredMenu === item.name" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2" @mouseenter="clearHoverTimeout" @mouseleave="handleMouseLeave">
+              <div class="text-white font-semibold px-2 pb-1">{{ item.name }}</div>
+              <div class="mt-1 space-y-1">
+                <template v-for="sub in item.children" :key="sub.path">
+                  <Link :href="sub.path" :class="['flex items-center gap-2 px-3 py-1.5 rounded-md text-sm', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
                     <span><component :is="sub.icon" :size="20" /></span>
                     <span>{{ sub.name }}</span>
                   </Link>
                 </template>
               </div>
-            </template>
-            <template v-else>
-              <Link :href="item.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-                <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
-                <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">{{ item.name }}</span>
-              </Link>
-              <!-- Hover Popup for Regular Menu Item (Desktop only) -->
-              <Link v-if="!isMobile && isCollapsed && hoveredMenu === item.name" :href="item.path" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
-                {{ item.name }}
-              </Link>
-            </template>
-          </div>
+            </div>
+          </template>
+          <template v-else>
+            <!-- Regular menu item -->
+            <Link :href="item.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
+              <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
+              <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">{{ item.name }}</span>
+            </Link>
+            <!-- Hover Popup for Regular Menu Item (Desktop only) -->
+            <Link v-if="!isMobile && isCollapsed && hoveredMenu === item.name" :href="item.path" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
+              {{ item.name }}
+            </Link>
+          </template>
         </div>
       </template>
     </div>
@@ -274,5 +283,26 @@ watch(isCollapsed, (newValue) => {
 
 .border-darkGreen-600 {
   border-color: #3a8585;
+}
+
+/* Dropdown transition styles */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+}
+
+.dropdown-enter-to,
+.dropdown-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 200px;
 }
 </style>
