@@ -14,6 +14,9 @@ Route::get('dashboard', function () {
 
 // Owner Dashboard Routes
 Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('Accounts/Owner Dashboard/Own_dashboard');
+    })->name('owner.dashboard');
     Route::get('/appointments/AppointmentList', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_AppointmentList');
     })->name('owner.appointments');
@@ -41,10 +44,6 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     Route::get('/clinic/ServicesList', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_ServicesList');
     })->name('owner.services');
-    
-    Route::get('/data/AppointmentData', function () {
-        return Inertia::render('Accounts/Owner Dashboard/Own_AppointmentData');
-    })->name('owner.data');
     
     Route::get('/reports/Reports', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_Reports');

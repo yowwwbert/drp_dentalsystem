@@ -8,25 +8,20 @@ const breadcrumbs: BreadcrumbItem[] = [
         title: 'Dashboard',
         href: '/dashboard',
     },
-    {
-        title: 'Appointment Data',
-        href: '/data/appointments',
-    },
 ];
 </script>
 
 <template>
-    <Head title="Appointment Data" />
+    <Head title="Owner Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900">Appointment Data</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Owner Dashboard</h1>
             </div>
-            
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Appointment Data Management</h2>
-                <p class="text-gray-600">This page will contain the appointment data management functionality.</p>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Welcome to the Owner Dashboard</h2>
+                <p class="text-gray-600">This is the default landing page for owner accounts. You can manage your clinic, appointments, staff, and more from the sidebar.</p>
             </div>
         </div>
     </AppLayout>
