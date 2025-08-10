@@ -15,7 +15,6 @@ const page = usePage();
 
 // Redirect Patient users
 const goToStep = (step: number) => {
-
     if (step === 1) router.visit(route('appointment'));
     else if (step === 2 && page.props.selectedBranch) router.visit(route('appointments.dentist'));
     else if (step === 3 && page.props.selectedBranch && page.props.selectedDentist && page.props.selectedDate && page.props.selectedTime) router.visit(route('appointments.service'));
@@ -23,65 +22,89 @@ const goToStep = (step: number) => {
 </script>
 
 <template>
-    <div class="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-        <div class="flex w-full max-w-md flex-col gap-6">
+    <div class="flex min-h-svh flex-col items-center justify-center gap-4 bg-muted p-4 md:p-8">
+        <div class="flex w-full max-w-5xl flex-col gap-5">
             <!-- Step Indicators -->
-            <div class="flex w-full max-w-md flex-col gap-4 mb-6">
-                <div class="flex justify-between items-center">
-                    <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
+            <div class="flex w-full max-w-5xl flex-col gap-4 mb-6">
+                <div
+                    class="grid grid-cols-[48px_1fr_48px_1fr_48px_1fr_48px_1fr_48px] items-center justify-items-center gap-0">
+                    <!-- Step 1 -->
+                    <div class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
                         :class="{
-                            'bg-green-500': currentStep > 1,
-                            'bg-red-500': currentStep === 1,
+                            'bg-[#1E4F4F]': currentStep > 1,
+                            'bg-[#3E7F7B]': currentStep === 1,
                             'bg-gray-300': currentStep < 1,
-                        }"
-                        @click="goToStep(1)"
-                    >
+                        }" @click="goToStep(1)">
                         1
                     </div>
-                    <div class="flex-1 h-1 bg-gray-300" :class="{ 'bg-green-500': currentStep > 1 }"></div>
-                    <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
+                    <div class="h-1 w-full transition-colors duration-300"
+                        :class="currentStep > 1 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
+                    <!-- Step 2 -->
+                    <div class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
                         :class="{
-                            'bg-green-500': currentStep > 2,
-                            'bg-blue-500': currentStep === 2,
+                            'bg-[#1E4F4F]': currentStep > 2,
+                            'bg-[#3E7F7B]': currentStep === 2,
                             'bg-gray-300': currentStep < 2,
-                        }"
-                        @click="goToStep(2)"
-                    >
+                        }" @click="goToStep(2)">
                         2
                     </div>
-                    <div class="flex-1 h-1 bg-gray-300" :class="{ 'bg-green-500': currentStep > 2 }"></div>
-                    <div
-                        class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
+                    <div class="h-1 w-full transition-colors duration-300"
+                        :class="currentStep > 2 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
+                    <!-- Step 3 -->
+                    <div class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
                         :class="{
-                            'bg-blue-500': currentStep === 3,
+                            'bg-[#3E7F7B]': currentStep === 3,
                             'bg-gray-300': currentStep < 3,
-                        }"
-                        @click="goToStep(3)"
-                    >
+                        }" @click="goToStep(3)">
                         3
                     </div>
+                    <div class="h-1 w-full transition-colors duration-300"
+                        :class="currentStep > 3 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
+                    <!-- Step 4 -->
+                    <div class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
+                        :class="{
+                            'bg-[#3E7F7B]': currentStep === 4,
+                            'bg-gray-300': currentStep < 4,
+                        }" @click="goToStep(4)">
+                        4
+                    </div>
+                    <div class="h-1 w-full transition-colors duration-300"
+                        :class="currentStep > 4 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
+                    <!-- Step 5 -->
+                    <div class="w-12 h-12 flex items-center justify-center rounded-full text-white text-xl font-bold shadow-md cursor-pointer"
+                        :class="{
+                            'bg-[#3E7F7B]': currentStep === 5,
+                            'bg-gray-300': currentStep < 5,
+                        }" @click="goToStep(5)">
+                        5
+                    </div>
                 </div>
-                <div class="flex justify-between text-sm text-gray-600">
-                    <span>Select Branch</span>
-                    <span>Select Dentist & Date</span>
-                    <span>Select Service</span>
+                <!-- Labels aligned under steps -->
+                <div
+                    class="grid grid-cols-[48px_1fr_48px_1fr_48px_1fr_48px_1fr_48px] justify-items-center text-md text-gray-480 py-0">
+                    <span class="text-center whitespace-nowrap">Select Branch</span>
+                    <div></div>
+                    <span class="text-center whitespace-nowrap">Select Dentist & Treatment</span>
+                    <div></div>
+                    <span class="text-center whitespace-nowrap">Select Date & Time</span>
+                    <div></div>
+                    <span class="text-center whitespace-nowrap">Enter Personal Information</span>
+                    <div></div>
+                    <span class="text-center whitespace-nowrap">Confirm Appointment</span>
                 </div>
             </div>
 
             <div class="flex flex-col gap-6">
                 <Card class="rounded-xl">
-                    <CardHeader class="px-10 pb-0 pt-8 text-center">
+                    <CardHeader class="px-6 pb-0 pt-8 text-center">
                         <CardTitle class="text-xl">{{ title }}</CardTitle>
                         <CardDescription>{{ description }}</CardDescription>
                     </CardHeader>
-                    <CardContent class="px-10 py-8">
+                    <CardContent class="px-6 py-8">
                         <slot />
                     </CardContent>
                 </Card>
             </div>
-
         </div>
     </div>
 </template>

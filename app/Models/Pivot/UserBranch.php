@@ -2,7 +2,7 @@
 
 namespace App\Models\Pivot;
 
-use App\Models\Appointment\Branches;
+use App\Models\Clinic\Branches;
 use App\Models\Users\User;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,6 +10,7 @@ class UserBranch extends Model
 {
     protected $table = 'user_branch';
     protected $fillable = ['user_id', 'branch_id'];
+
 
     public function user()
     {

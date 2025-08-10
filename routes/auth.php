@@ -36,6 +36,11 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create']) //Page ng medical
+        ->name('medical-information');
+
+    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store']) //Save ng medical
+        ->name('medical-information.store');
 });
 
 Route::middleware('auth')->group(function () {
@@ -71,9 +76,5 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 
-    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create']) //Page ng medical
-        ->name('medical-information');
-
-    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store']) //Save ng medical
-        ->name('medical-information.store');
+    
 });

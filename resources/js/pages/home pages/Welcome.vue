@@ -18,7 +18,7 @@ const page = usePage<PageProps>()
 </script>
 
 <template>
-  <Head title="DRP">
+  <Head title="DRP Dental Clinic">
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
   </Head>
@@ -34,6 +34,7 @@ const page = usePage<PageProps>()
     }"
   >
     <Header />
+  
 
     <div class="duration-750 starting:opacity-0 flex w-full items-center justify-center opacity-100 transition-opacity lg:grow">
       <main class="block w-full flex-col-reverse overflow-hidden rounded-lg lg:max-w-7xl lg:flex-row">
@@ -45,7 +46,7 @@ const page = usePage<PageProps>()
           Welcome to DRP Dental Clinic, book your appointment now!
         </p>
         <Link
-          :href="route('login')"
+          :href="route('appointment')"
           class="inline-block border-b-2 border-transparent px-5 py-1.5 font-medium rounded-2xl bg-[#1E4F4F] text-white"
         >
           Book Appointment

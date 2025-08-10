@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Appointment;
+namespace App\Models\Clinic;
 
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,11 +37,13 @@ class Branches extends Model
         'branch_facebook',
         'branch_instagram',
         'operating_days',
-        'opening_hours',
+        'opening_time',
         'closing_time',
     ];
 
     protected $casts = [
         'branch_id' => 'string',
+        'operating_days' => 'array'
     ];
 }
+
