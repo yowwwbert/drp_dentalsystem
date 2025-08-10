@@ -6,7 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { onMounted } from 'vue';
+import { usePage, router, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
 defineProps<{
@@ -25,6 +26,17 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
+
+onMounted(() => {
+    const page = usePage<{ auth?: { user?: any } }>();
+    if (page.props.auth && page.props.auth.user) {
+        router.post(route('logout'), {}, {
+            onFinish: () => {
+                window.location.reload();
+            }
+        });
+    }
+});
 </script>
 
 <template>

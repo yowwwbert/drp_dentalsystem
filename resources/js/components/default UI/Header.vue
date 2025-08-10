@@ -67,18 +67,10 @@ const toggleMobileMenu = () => {
                     Contact Us
                 </Link>
                 <Link
-                    v-if="page.props.auth?.user"
-                    :href="route('dashboard')"
-                    class="inline-block rounded-full border border-transparent px-7 py-3 text-lg leading-normal text-white bg-[#1E4F4F] hover:bg-[#163c3c] hover:text-white"
-                >
-                    Dashboard
-                </Link>
-                <Link
-                    v-else
                     :href="route('login')"
                     class="inline-block rounded-full border border-transparent px-7 py-3 text-lg leading-normal text-white bg-[#1E4F4F] hover:bg-[#163c3c] hover:text-white"
                 >
-                    Log in
+                    Book Appointment
                 </Link>
             </div>
 
@@ -159,20 +151,11 @@ const toggleMobileMenu = () => {
                     Contact Us
                 </Link>
                 <Link
-                    v-if="page.props.auth?.user"
-                    :href="route('dashboard')"
-                    class="w-full text-center py-2 text-lg font-medium text-white bg-[#1E4F4F] hover:bg-[#163c3c] rounded-full"
-                    @click="toggleMobileMenu"
-                >
-                    Dashboard
-                </Link>
-                <Link
-                    v-else
                     :href="route('login')"
                     class="w-full text-center py-2 text-lg font-medium text-white bg-[#1E4F4F] hover:bg-[#163c3c] rounded-full"
                     @click="toggleMobileMenu"
                 >
-                    Log in
+                    Book Appointment
                 </Link>
             </div>
         </div>
