@@ -8,6 +8,9 @@ class Treatment extends Model
 {
     protected $table = 'treatments'; // Assuming the table name is 'treatments'
     protected $primaryKey = 'treatment_id'; // Assuming the primary key is 't
+    public $incrementing = false; // If treatment_id is not an auto-incrementing field
+    protected $keyType = 'string'; // Assuming treatment_id is a string type
+
 
     protected $fillable = [
         'treatment_id',

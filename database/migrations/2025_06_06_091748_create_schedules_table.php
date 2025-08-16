@@ -12,15 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('schedules', function (Blueprint $table) {
-            $table->string('schedule_id', 50)->primary();
+            $table->string('schedule_id', 36)->primary();
+            $table->string('branch_id', 255);
+            $table->date('schedule_date');
             $table->time('start_time');
             $table->time('end_time');
-            $table->date('date');
+
             $table->foreign('branch_id')
-                  ->references('branch_id')
-                  ->on('branches')
-                  ->onDelete('cascade');
-            $table->string('branch_id', 50);
+                ->references('branch_id')
+                ->on('branches')
+                ->onDelete('cascade');
+
+            $table->boolean('is_active')->default(true)->comment('Indicates if the schedule is active');
         });
     }
 
@@ -29,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('schedules');
+        Schema::dropIfExists('schedule');
     }
 };

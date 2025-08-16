@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Header from '../../components/default UI/Header.vue'
+import { Head} from '@inertiajs/vue3'
 import Footer from '../../components/default UI/Footer.vue'
 import { Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
@@ -47,6 +48,10 @@ const hoveredIndex = ref(-1)
 </script>
 
 <template>
+    <Head title="Branches">
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+  </Head>
     <Header />
     <div
         class="flex min-h-screen flex-col p-4 items-center text-[#1b1b18] dark:text-[#EDEDEC] lg:justify-center lg:p-2"
