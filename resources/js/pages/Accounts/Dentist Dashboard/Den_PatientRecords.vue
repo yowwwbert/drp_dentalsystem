@@ -18,24 +18,7 @@ const itemsPerPage = ref(10);
 // Modal states
 const showViewModal = ref(false);
 const showEditModal = ref(false);
-const showAddModal = ref(false);
 const selectedPatient = ref<any>(null);
-
-// Form data for add/edit patient modal
-const patientForm = ref({
-    name: '',
-    age: '',
-    gender: '',
-    phone: '',
-    email: '',
-    address: '',
-    branch: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    medicalHistory: '',
-    allergies: '',
-    notes: ''
-});
 
 // Sample patient data - in real app, this would come from API
 const patients = ref([
@@ -51,11 +34,9 @@ const patients = ref([
         lastVisit: '2024-01-15',
         nextAppointment: '2024-02-15',
         status: 'Active',
-        emergencyContact: 'Jane Smith',
-        emergencyPhone: '+63 912 345 6790',
         medicalHistory: 'No known allergies. Previous root canal treatment in 2023.',
-        allergies: 'None',
-        notes: 'Patient shows good oral hygiene practices.'
+        treatmentPlan: 'Regular cleaning every 6 months. Monitor cavity on tooth #14.',
+        notes: 'Patient shows good oral hygiene practices. Recommend fluoride treatment.'
     },
     {
         id: 'P002',
@@ -69,11 +50,9 @@ const patients = ref([
         lastVisit: '2024-01-10',
         nextAppointment: '2024-01-25',
         status: 'Active',
-        emergencyContact: 'Carlos Garcia',
-        emergencyPhone: '+63 923 456 7891',
         medicalHistory: 'Allergic to penicillin. No other medical conditions.',
-        allergies: 'Penicillin',
-        notes: 'Patient experienced sensitivity after filling.'
+        treatmentPlan: 'Complete cavity filling on tooth #19. Schedule crown placement.',
+        notes: 'Patient experienced sensitivity after filling. Monitor for any complications.'
     },
     {
         id: 'P003',
@@ -87,17 +66,30 @@ const patients = ref([
         lastVisit: '2023-12-20',
         nextAppointment: '2024-02-20',
         status: 'Active',
-        emergencyContact: 'Lisa Johnson',
-        emergencyPhone: '+63 934 567 8902',
         medicalHistory: 'Hypertension controlled with medication. Diabetes type 2.',
-        allergies: 'None',
-        notes: 'Patient needs special attention due to diabetes.'
+        treatmentPlan: 'Regular monitoring due to medical conditions. Professional cleaning every 3 months.',
+        notes: 'Patient needs special attention due to diabetes. Monitor gum health closely.'
+    },
+    {
+        id: 'P004',
+        name: 'Sarah Wilson',
+        age: 32,
+        gender: 'Female',
+        phone: '+63 945 678 9012',
+        email: 'sarah.wilson@email.com',
+        address: '321 Elm St, Pasig City',
+        branch: 'Main Branch',
+        lastVisit: '2024-01-05',
+        nextAppointment: '2024-03-05',
+        status: 'Active',
+        medicalHistory: 'No known medical conditions. Previous wisdom tooth extraction.',
+        treatmentPlan: 'Regular checkup every 6 months. Monitor wisdom tooth area.',
+        notes: 'Patient recovered well from extraction. No complications reported.'
     }
 ]);
 
 const statusOptions = ['All Patients', 'Active', 'Inactive', 'New Patient'];
 const branchOptions = ['All Branches', 'Main Branch', 'North Branch', 'South Branch'];
-const genderOptions = ['Male', 'Female', 'Other'];
 
 const filteredPatients = computed(() => {
     let filtered = patients.value;
@@ -144,29 +136,8 @@ const handleViewPatient = (patientId: string) => {
 
 const handleEditPatient = (patientId: string) => {
     const patient = patients.value.find(p => p.id === patientId);
-    if (patient) {
-        patientForm.value = { ...patient };
-    }
     selectedPatient.value = patient || null;
     showEditModal.value = true;
-};
-
-const handleAddPatient = () => {
-    patientForm.value = {
-        name: '',
-        age: '',
-        gender: '',
-        phone: '',
-        email: '',
-        address: '',
-        branch: '',
-        emergencyContact: '',
-        emergencyPhone: '',
-        medicalHistory: '',
-        allergies: '',
-        notes: ''
-    };
-    showAddModal.value = true;
 };
 
 const closeViewModal = () => {
@@ -179,32 +150,9 @@ const closeEditModal = () => {
     selectedPatient.value = null;
 };
 
-const closeAddModal = () => {
-    showAddModal.value = false;
-};
-
 const savePatientChanges = () => {
     // In real app, this would save to API
-    if (selectedPatient.value) {
-        const index = patients.value.findIndex(p => p.id === selectedPatient.value.id);
-        if (index !== -1) {
-            patients.value[index] = { ...selectedPatient.value, ...patientForm.value };
-        }
-    }
     closeEditModal();
-};
-
-const addNewPatient = () => {
-    // In real app, this would save to API
-    const newPatient = {
-        id: `P${String(patients.value.length + 1).padStart(3, '0')}`,
-        ...patientForm.value,
-        lastVisit: 'N/A',
-        nextAppointment: 'Not scheduled',
-        status: 'New Patient'
-    };
-    patients.value.push(newPatient);
-    closeAddModal();
 };
 
 const getStatusColor = (status: string) => {
@@ -217,7 +165,6 @@ const getStatusColor = (status: string) => {
 };
 
 const formatDate = (dateString: string) => {
-    if (dateString === 'N/A') return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
@@ -233,10 +180,7 @@ const formatDate = (dateString: string) => {
         <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-gray-900">Patient Records</h1>
-                <button
-                    @click="handleAddPatient"
-                    class="bg-darkGreen-900 text-white px-4 py-2 rounded-lg hover:bg-darkGreen-800 transition-colors duration-200"
-                >
+                <button class="bg-darkGreen-900 text-white px-4 py-2 rounded-lg hover:bg-darkGreen-800 transition-colors duration-200">
                     Add New Patient
                 </button>
             </div>
@@ -415,25 +359,14 @@ const formatDate = (dateString: string) => {
                             <input type="text" :value="selectedPatient.address" readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" />
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-                                <input type="text" :value="selectedPatient.emergencyContact" readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
-                                <input type="text" :value="selectedPatient.emergencyPhone" readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" />
-                            </div>
-                        </div>
-
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
                             <textarea readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" rows="3">{{ selectedPatient.medicalHistory }}</textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-                            <textarea readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" rows="2">{{ selectedPatient.allergies }}</textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Treatment Plan</label>
+                            <textarea readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" rows="3">{{ selectedPatient.treatmentPlan }}</textarea>
                         </div>
 
                         <div>
@@ -454,73 +387,72 @@ const formatDate = (dateString: string) => {
                             class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
                         >&times;</button>
                     </div>
-                    <div class="space-y-4">
+                    <div v-if="selectedPatient" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Patient ID</label>
+                                <input type="text" :value="selectedPatient.id" readonly class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50" />
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                <input type="text" v-model="patientForm.name" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                                <input type="text" v-model="selectedPatient.name" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                                <input type="number" v-model="patientForm.age" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                                <input type="number" v-model="selectedPatient.age" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-                                <select v-model="patientForm.gender" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                                    <option value="">Select Gender</option>
-                                    <option v-for="gender in genderOptions" :key="gender" :value="gender">
-                                        {{ gender }}
-                                    </option>
+                                <select v-model="selectedPatient.gender" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <input type="text" v-model="patientForm.phone" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                                <input type="text" v-model="selectedPatient.phone" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input type="email" v-model="patientForm.email" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                                <input type="email" v-model="selectedPatient.email" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-                                <select v-model="patientForm.branch" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                                    <option value="">Select Branch</option>
-                                    <option v-for="branch in branchOptions.slice(1)" :key="branch" :value="branch">
-                                        {{ branch }}
-                                    </option>
+                                <select v-model="selectedPatient.branch" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
+                                    <option value="Main Branch">Main Branch</option>
+                                    <option value="North Branch">North Branch</option>
+                                    <option value="South Branch">South Branch</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <select v-model="selectedPatient.status" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="New Patient">New Patient</option>
                                 </select>
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                            <input type="text" v-model="patientForm.address" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-                                <input type="text" v-model="patientForm.emergencyContact" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
-                                <input type="text" v-model="patientForm.emergencyPhone" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
+                            <input type="text" v-model="selectedPatient.address" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
-                            <textarea v-model="patientForm.medicalHistory" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
+                            <textarea v-model="selectedPatient.medicalHistory" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-                            <textarea v-model="patientForm.allergies" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="2"></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Treatment Plan</label>
+                            <textarea v-model="selectedPatient.treatmentPlan" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                            <textarea v-model="patientForm.notes" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
+                            <textarea v-model="selectedPatient.notes" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
                         </div>
 
                         <div class="flex gap-2 pt-4">
@@ -536,99 +468,6 @@ const formatDate = (dateString: string) => {
                     </div>
                 </div>
             </div>
-
-            <!-- Add Patient Modal -->
-            <div v-if="showAddModal" class="absolute inset-0 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold text-gray-900">Add New Patient</h2>
-                        <button
-                            @click="closeAddModal"
-                            class="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-                        >&times;</button>
-                    </div>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                                <input type="text" v-model="patientForm.name" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Age *</label>
-                                <input type="number" v-model="patientForm.age" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
-                                <select v-model="patientForm.gender" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                                    <option value="">Select Gender</option>
-                                    <option v-for="gender in genderOptions" :key="gender" :value="gender">
-                                        {{ gender }}
-                                    </option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                                <input type="text" v-model="patientForm.phone" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input type="email" v-model="patientForm.email" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-                                <select v-model="patientForm.branch" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                                    <option value="">Select Branch</option>
-                                    <option v-for="branch in branchOptions.slice(1)" :key="branch" :value="branch">
-                                        {{ branch }}
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                            <input type="text" v-model="patientForm.address" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
-                                <input type="text" v-model="patientForm.emergencyContact" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
-                                <input type="text" v-model="patientForm.emergencyPhone" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
-                            <textarea v-model="patientForm.medicalHistory" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-                            <textarea v-model="patientForm.allergies" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="2"></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                            <textarea v-model="patientForm.notes" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" rows="3"></textarea>
-                        </div>
-
-                        <div class="flex gap-2 pt-4">
-                            <button
-                                @click="addNewPatient"
-                                class="flex-1 bg-darkGreen-900 text-white px-4 py-2 rounded hover:bg-darkGreen-800 transition-colors duration-200"
-                            >Add Patient</button>
-                            <button
-                                @click="closeAddModal"
-                                class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition-colors duration-200"
-                            >Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </AppLayout>
-</template> 
+</template>
