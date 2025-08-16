@@ -52,7 +52,7 @@ const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> =>
         icon: Hospital,
         children: [
           { name: 'Dentists', path: `/dashboard/owner/records/DentistRecords`, icon: UserCircle },
-          { name: 'Staff', path: `/dashboard/owner/records/ReceptionistRecords`, icon: UserCog },
+          { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
           { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
           { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
         ],

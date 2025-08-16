@@ -136,6 +136,11 @@ class User extends Authenticatable
         return $this->hasOne(Staff::class);
     }
 
+    public function branches()
+    {
+        return $this->belongsToMany(Branches::class, 'user_branch', 'user_id', 'branch_id', 'user_id', 'branch_id');
+    }
+
     public function getEmailForPasswordReset()
 {
     return $this->email_address;

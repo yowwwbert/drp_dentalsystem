@@ -1,0 +1,108 @@
+{
+  "services": [
+    {
+      "id": 1,
+      "title": "Cleaning",
+      "description": "Professional dental cleaning to maintain oral health and prevent cavities.",
+      "icon": "/images/clean.png",
+      "status": "Active",
+      "price": "₱1,500",
+      "duration": "45 minutes",
+      "category": "Preventive",
+      "color": "#1E4F4F",
+      "textColor": "white"
+    },
+    {
+      "id": 2,
+      "title": "Whitening",
+      "description": "Enhance the brightness of your smile with safe whitening procedures.",
+      "icon": "/images/whiten.png",
+      "status": "Active",
+      "price": "₱3,000",
+      "duration": "1 hour",
+      "category": "Cosmetic",
+      "color": "#4D807A",
+      "textColor": "white"
+    },
+    {
+      "id": 3,
+      "title": "Filling",
+      "description": "Restore teeth damaged by decay with durable and aesthetic fillings.",
+      "icon": "/images/filling.png",
+      "status": "Active",
+      "price": "₱2,500",
+      "duration": "1 hour",
+      "category": "Restorative",
+      "color": "#1E4F4F",
+      "textColor": "white"
+    },
+    {
+      "id": 4,
+      "title": "Tooth Extraction",
+      "description": "Safe removal of damaged or problematic teeth with minimal discomfort.",
+      "icon": "/images/extraction.png",
+      "status": "Active",
+      "price": "₱2,000",
+      "duration": "30 minutes",
+      "category": "Surgical",
+      "color": "#4D807A",
+      "textColor": "white"
+    },
+    {
+      "id": 5,
+      "title": "Implants",
+      "description": "Replace missing teeth with durable and natural-looking dental implants.",
+      "icon": "/images/implant.png",
+      "status": "Active",
+      "price": "₱25,000",
+      "duration": "2 hours",
+      "category": "Surgical",
+      "color": "#1E4F4F",
+      "textColor": "white"
+    },
+    {
+      "id": 6,
+      "title": "Orthodontics",
+      "description": "Align and straighten teeth for improved functionality and aesthetics.",
+      "icon": "/images/ortho.png",
+      "status": "Active",
+      "price": "₱15,000",
+      "duration": "1.5 hours",
+      "category": "Orthodontic",
+      "color": "#4D807A",
+      "textColor": "white"
+    },
+    {
+      "id": 7,
+      "title": "Root Canal",
+      "description": "Preserve damaged teeth by treating infections within the tooth pulp.",
+      "icon": "/images/root_canal.png",
+      "status": "Active",
+      "price": "₱8,000",
+      "duration": "1.5 hours",
+      "category": "Endodontic",
+      "color": "#1E4F4F",
+      "textColor": "white"
+    },
+    {
+      "id": 8,
+      "title": "Cosmetic Dentistry",
+      "description": "Enhance your smile with advanced cosmetic dental procedures.",
+      "icon": "/images/cosmetic.png",
+      "status": "Active",
+      "price": "₱5,000",
+      "duration": "1 hour",
+      "category": "Cosmetic",
+      "color": "#4D807A",
+      "textColor": "white"
+    }
+  ],
+  "categories": [
+    "Preventive",
+    "Cosmetic",
+    "Restorative",
+    "Surgical",
+    "Orthodontic",
+    "Endodontic"
+  ]
+} 

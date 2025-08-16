@@ -33,8 +33,8 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
         return Inertia::render('Accounts/Owner Dashboard/Own_DentistRecords');
     })->name('owner.dentists');
     
-    Route::get('/records/ReceptionistRecords', function () {
-        return Inertia::render('Accounts/Owner Dashboard/Own_ReceptionistRecords');
+    Route::get('/records/StaffRecords', function () {
+        return Inertia::render('Accounts/Owner Dashboard/Own_StaffRecords');
     })->name('owner.staff');
     
     Route::get('/clinic/BranchSettings', function () {
@@ -50,7 +50,17 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     })->name('owner.reports');
     
     Route::get('/records/UserDetails', function () {
-        return Inertia::render('Accounts/Owner Dashboard/Own_UserDetails');
+        $user = auth()->user();
+        $owner = \App\Models\Users\Owner::where('owner_id', $user->user_id)->first();
+        
+        // Get user details with related data
+        $userDetails = [
+            'user' => $user,
+            'owner' => $owner,
+            'branch' => $user->branches()->first(),
+        ];
+        
+        return Inertia::render('Accounts/Owner Dashboard/Own_UserDetails', $userDetails);
     })->name('owner.profile');
 });
 
