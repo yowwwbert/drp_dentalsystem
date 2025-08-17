@@ -57,7 +57,7 @@ const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> =>
           { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
         ],
       },
-      { name: 'Data', path: `/dashboard/owner/data/AppointmentData`, icon: ChartBar },
+      { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },
       { name: 'Reports', path: `/dashboard/owner/reports/Reports`, icon: FileText },
     ],
     Dentist: [

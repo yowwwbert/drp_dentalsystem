@@ -49,6 +49,10 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
         return Inertia::render('Accounts/Owner Dashboard/Own_Reports');
     })->name('owner.reports');
     
+    Route::get('/data/Data', function () {
+        return Inertia::render('Accounts/Owner Dashboard/Own_Data');
+    })->name('owner.data');
+    
     Route::get('/records/UserDetails', function () {
         $user = auth()->user();
         $owner = \App\Models\Users\Owner::where('owner_id', $user->user_id)->first();
