@@ -2,7 +2,7 @@
 import { Label } from '@/components/ui/label';
 import AppointmentLayout from '@/layouts/form/AppointmentLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { LoaderCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -31,64 +31,62 @@ const form = useForm({
     branch_id: props.branch_id || sessionStorage.getItem('selected_branch_id') || '',
     dentist_id: props.dentist_id || sessionStorage.getItem('selected_dentist_id') || '',
     schedule_id: '',
-    selectedTime: '',
-    treatment_id: props.treatment_id || sessionStorage.getItem('selected_treatment_id') || '', // Add fallback
+    treatment_id: props.treatment_id || sessionStorage.getItem('selected_treatment_id') || '',
 });
 
-// Compute available dates from schedules
-const availableDates = computed(() => schedules.value.map(s => s.schedule_date));
+const selectedDate = ref<string>('');
+
+// Compute available dates from schedules (unique dates)
+const availableDates = computed(() => [...new Set(schedules.value.map(s => s.schedule_date))]);
+
+// Compute available schedules for the selected date
+const availableSchedules = computed(() => {
+    if (!selectedDate.value) return [];
+    return schedules.value.filter(s => s.schedule_date === selectedDate.value);
+});
 
 const currentDate = new Date();
+const todayStr = currentDate.toISOString().split('T')[0];
 const currentMonth = ref(currentDate.getMonth());
 const currentYear = ref(currentDate.getFullYear());
 const daysInMonth = computed(() => new Date(currentYear.value, currentMonth.value + 1, 0).getDate());
 const firstDayIndex = computed(() => new Date(currentYear.value, currentMonth.value, 1).getDay());
 
-// Handle calendar date selection to set schedule_id
+// Handle calendar date selection
 const selectDate = (dateStr: string) => {
-    const schedule = schedules.value.find(s => s.schedule_date === dateStr);
-    if (schedule) {
-        form.schedule_id = schedule.schedule_id.toString();
-    } else {
+    if (selectedDate.value === dateStr) {
+        selectedDate.value = ''; // Deselect if clicking the same date
         form.schedule_id = '';
+    } else {
+        selectedDate.value = dateStr;
+        form.schedule_id = ''; // Reset schedule_id when changing date
     }
 };
 
 onMounted(async () => {
-    if (!props.branch_id || !props.dentist_id || !props.treatment_id) {
+    if (!form.branch_id || !form.dentist_id || !form.treatment_id) {
         errorMessage.value = 'Branch ID, Dentist ID, and Treatment ID are required.';
         return;
     }
 
     try {
         const response = await axios.get(route('appointment.dentist.schedule', {
-            branch_id: props.branch_id,
-            dentist_id: props.dentist_id,
+            branch_id: form.branch_id,
+            dentist_id: form.dentist_id,
         }), {
-            params: { dentist_id: props.dentist_id }
+            params: { dentist_id: form.dentist_id }
         });
         schedules.value = response.data || [];
         if (!schedules.value.length) {
             errorMessage.value = 'No schedules available for this dentist at the selected branch.';
-        } else if (form.schedule_id === '') {
-            const todaySchedule = schedules.value.find(s => s.schedule_date === currentDate.toISOString().split('T')[0]);
-            if (todaySchedule) {
-                form.schedule_id = todaySchedule.schedule_id.toString();
+        } else {
+            // Auto-select today's date if available
+            if (availableDates.value.includes(todayStr)) {
+                selectedDate.value = todayStr;
             }
         }
     } catch (error) {
         errorMessage.value = 'Failed to load schedules. Please try again.';
-    }
-});
-
-watch(() => form.schedule_id, (newScheduleId) => {
-    if (newScheduleId) {
-        const selectedSchedule = schedules.value.find(s => s.schedule_id === parseInt(newScheduleId) || s.schedule_id === newScheduleId);
-        if (selectedSchedule) {
-            form.schedule_id = selectedSchedule.schedule_id.toString();
-        } else {
-            form.schedule_id = '';
-        }
     }
 });
 
@@ -151,10 +149,10 @@ const days = computed(() => {
                             :key="index"
                             class="p-2 border rounded-lg cursor-pointer hover:bg-green-100 dark:hover:bg-gray-700"
                             :class="{
-                                'bg-[#3E7F7B]/25 dark:bg-green-900': day && day.isAvailable && day.dateStr !== new Date().toISOString().split('T')[0] && !schedules.some((s: Schedule) => s.schedule_id.toString() === form.schedule_id && s.schedule_date === day.dateStr),
+                                'bg-[#3E7F7B]/25 dark:bg-green-900': day && day.isAvailable && day.dateStr !== selectedDate && day.dateStr !== todayStr,
                                 'text-gray-400': !day,
-                                'bg-[#1E4F4F] dark:bg-[#3E7F7B] text-white': day && schedules.some((s: Schedule) => s.schedule_id.toString() === form.schedule_id && s.schedule_date === day.dateStr),
-                                'bg-[#3E7F7B] text-white dark:bg-yellow-800': day && day.dateStr === new Date().toISOString().split('T')[0] && !schedules.some((s: Schedule) => s.schedule_id.toString() === form.schedule_id && s.schedule_date === day.dateStr)
+                                'bg-[#1E4F4F] dark:bg-[#3E7F7B] text-white': day && day.dateStr === selectedDate,
+                                'bg-[#3E7F7B] text-white dark:bg-yellow-800': day && day.dateStr === todayStr && day.dateStr !== selectedDate && day.isAvailable
                             }"
                             @click="day ? selectDate(day.dateStr) : null"
                         >
@@ -172,28 +170,28 @@ const days = computed(() => {
                 <Label for="time" class="text-sm font-medium">Time</Label>
                 <select
                     id="time"
-                    v-model="form.selectedTime"
+                    v-model="form.schedule_id"
                     class="border rounded-lg p-2 w-full dark:bg-gray-800 dark:border-gray-600"
-                    :disabled="!form.schedule_id || !schedules.length"
+                    :disabled="!selectedDate || !availableSchedules.length"
                 >
                     <option value="" disabled>Select a time</option>
                     <option
-                        v-for="schedule in schedules.filter(s => s.schedule_id.toString() === form.schedule_id)"
-                        :key="schedule.start_time"
-                        :value="schedule.start_time"
+                        v-for="schedule in availableSchedules"
+                        :key="schedule.schedule_id"
+                        :value="schedule.schedule_id.toString()"
                     >
                         {{ new Date(`${schedule.schedule_date} ${schedule.start_time}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }} - {{ new Date(`${schedule.schedule_date} ${schedule.end_time}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}
                     </option>
                 </select>
-                <InputError v-if="form.errors.selectedTime" :message="form.errors.selectedTime" />
+                <InputError v-if="form.errors.schedule_id" :message="form.errors.schedule_id" />
             </div>
             <div class="flex justify-end mt-4">
                 <Button
                     type="submit"
-                    :disabled="form.processing || !form.schedule_id || !form.selectedTime || !form.treatment_id"
+                    :disabled="form.processing || !form.schedule_id || !form.treatment_id"
                     variant="secondary"
                     class="w-36"
-                    :class="{ 'bg-[#3E7F7B] text-white hover:bg-[#3E7F7B]/50': form.schedule_id && form.selectedTime && form.treatment_id }"
+                    :class="{ 'bg-[#3E7F7B] text-white hover:bg-[#3E7F7B]/50': form.schedule_id && form.treatment_id }"
                 >
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     <span v-else>Next</span>

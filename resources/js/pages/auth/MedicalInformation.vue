@@ -27,7 +27,6 @@ const form = useForm({
 });
 
 const submit = () => {
-
   form.post(route('medical-information.store'), {
     onFinish: () => {
       console.log('Form submission finished', form.errors);

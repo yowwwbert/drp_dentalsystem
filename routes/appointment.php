@@ -12,7 +12,7 @@ Route::get('appointment', function () {
     return Inertia::render('appointment/SelectBranch');
 })->name('appointment');
 
-Route::get('fetch-branches', [BranchAppointmentController::class, 'getBranchesForAppointment'])
+Route::get('fetch-branches', [BranchAppointmentController::class, 'getBranches'])
     ->name('appointment.branches');
 
 Route::post('appointment', [BranchAppointmentController::class, 'store'])

@@ -9,10 +9,9 @@ use Illuminate\Http\Request;
 
 class BranchAppointmentController extends Controller
 {
-    public function getBranchesForAppointment(Request $request)
+    public function getBranches(Request $request)
     {
-        $branches = Branches::select('branch_id', 'branch_name', 'branch_address')
-            ->get();
+        $branches = Branches::orderBy('branch_name', 'asc')->get();
         Log::info('Fetched branches for appointment:', $branches->toArray());
         return response()->json($branches);
     }

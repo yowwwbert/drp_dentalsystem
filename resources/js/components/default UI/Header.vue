@@ -70,7 +70,7 @@ const toggleMobileMenu = () => {
                     :href="route('login')"
                     class="inline-block rounded-full border border-transparent px-7 py-3 text-lg leading-normal text-white bg-[#1E4F4F] hover:bg-[#163c3c] hover:text-white"
                 >
-                    Book Appointment
+                    Login
                 </Link>
             </div>
 

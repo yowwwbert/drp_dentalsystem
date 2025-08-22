@@ -9,6 +9,7 @@ use App\Models\Users\Dentist;
 use App\Models\Users\Staff;
 use App\Models\Users\Owner;
 use App\Models\PatientDetails\Guardian;
+use App\Models\Pivot\UserBranch;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Str;
 
 class RegisteredUserController extends Controller
 {
@@ -29,14 +31,12 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        // Log request data for debugging
         Log::info('Registration request data:', [
-            'all' => $request->all(),
+            'all'   => $request->all(),
             'files' => $request->hasFile('valid_id') ? 'valid_id present' : 'valid_id not present',
             'user_type' => $request->user_type,
         ]);
 
-        // Validate registration fields
         $request->validate([
             'first_name'      => 'required|string|min:2|max:70',
             'last_name'       => 'required|string|min:2|max:50',
@@ -83,12 +83,9 @@ class RegisteredUserController extends Controller
             ],
         ]);
 
-        // Use a transaction for data consistency
         return DB::transaction(function () use ($request) {
-            // Generate UUID for user_id if not provided
-            $userId = $request->user_id ?: \Illuminate\Support\Str::uuid()->toString();
+            $userId = $request->user_id ?: Str::uuid()->toString();
 
-            // Create the user account
             $user = User::create([
                 'user_id'         => $userId,
                 'first_name'      => $request->first_name,
@@ -110,47 +107,57 @@ class RegisteredUserController extends Controller
 
             event(new Registered($user));
 
-            // Create related records based on user_type
             if ($user->user_type === 'Patient') {
                 $validIdPath = $request->file('valid_id') ? $request->file('valid_id')->store('valid_ids', 'public') : null;
                 Patient::create([
                     'patient_id'        => $user->user_id,
-                    'guardian_id'       => $request->guardian_id ?: \Illuminate\Support\Str::uuid()->toString(),
+                    'guardian_id'       => $request->guardian_id,
                     'valid_id'          => $validIdPath,
                     'remaining_balance' => 0,
                 ]);
 
                 if ($request->filled('guardian_first_name') || $request->filled('guardian_last_name')) {
                     Guardian::create([
-                        'guardian_id'          => $request->guardian_id ?: \Illuminate\Support\Str::uuid()->toString(),
+                        'guardian_id'          => $request->guardian_id ?: Str::uuid()->toString(),
                         'guardian_first_name'  => $request->guardian_first_name,
                         'guardian_last_name'   => $request->guardian_last_name,
-                        'guardian_relationship' => $request->guardian_relationship,
-                        'guardian_phone_number' => $request->guardian_phone_number,
+                        'guardian_relationship'=> $request->guardian_relationship,
+                        'guardian_phone_number'=> $request->guardian_phone_number,
                         'guardian_email_address'=> $request->guardian_email_address,
                         'guardian_valid_id'    => $request->file('guardian_valid_id') ? $request->file('guardian_valid_id')->store('guardians', 'public') : null,
                     ]);
                 }
+
+                // 🔑 Put Patient user_id into session for later MedicalInformation
+                session(['user_id' => $user->user_id]);
+
             } elseif ($user->user_type === 'Dentist') {
                 Dentist::create([
-                    'dentist_id'        => $user->user_id,
-                    'dentist_type'      => 'Dentist',
+                    'dentist_id'   => $user->user_id,
+                    'dentist_type' => 'Dentist',
+                ]);
+                UserBranch::create([
+                    'user_id'   => $user->user_id,
+                    'branch_id' => $request->branch_id,
                 ]);
                 Auth::login($user);
             } elseif ($user->user_type === 'Staff') {
                 Staff::create([
-                    'staff_id'          => $user->user_id,
-                    'staff_type'        => 'Receptionist',
+                    'staff_id'   => $user->user_id,
+                    'staff_type' => 'Receptionist',
+                ]);
+                UserBranch::create([
+                    'user_id'   => $user->user_id,
+                    'branch_id' => $request->branch_id,
                 ]);
                 Auth::login($user);
             } elseif ($user->user_type === 'Owner') {
                 Owner::create([
-                    'owner_id'          => $user->user_id,
+                    'owner_id' => $user->user_id,
                 ]);
                 Auth::login($user);
             }
 
-            // Redirect based on user_type
             return redirect()->route($user->user_type === 'Patient' ? 'medical-information' : 'verification.notice')
                 ->with([
                     'has_email' => !empty($user->email_address),

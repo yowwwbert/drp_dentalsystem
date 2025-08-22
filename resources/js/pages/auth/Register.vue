@@ -9,7 +9,16 @@ import { Eye, EyeOff } from 'lucide-vue-next';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
+import axios from 'axios';
+
+interface Branch {
+    branch_id: string;
+    name: string;
+}
+
+const branches = ref<Branch[]>([]);
+const isLoadingBranches = ref(false);
 
 const form = useForm({
     first_name: '',
@@ -28,6 +37,7 @@ const form = useForm({
     status: 'Active',
     valid_id: null,
     password: '',
+    branch_id: '',
     password_confirmation: '',
     guardian_first_name: '',
     guardian_last_name: '',
@@ -36,6 +46,23 @@ const form = useForm({
     guardian_email_address: '',
     guardian_valid_id: null,
     contact_information: '',
+});
+
+// Fetch branches on mount
+onMounted(async () => {
+    isLoadingBranches.value = true;
+    try {
+        const response = await axios.get(route('appointment.branches'));
+        branches.value = response.data.map((branch: any) => ({
+            branch_id: String(branch.branch_id),
+            name: branch.branch_name,
+        }));
+    } catch (error) {
+        console.error('Error fetching branches:', error);
+        branches.value = [];
+    } finally {
+        isLoadingBranches.value = false;
+    }
 });
 
 // Password strength checker
@@ -57,7 +84,7 @@ const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isPasswordFocused = ref(false);
 
-// Reset valid_id and guardian fields for non-Patient users
+// Reset valid_id, guardian fields, and branch_id for non-Patient users
 watch(() => form.user_type, (newValue) => {
     if (newValue !== 'Patient') {
         form.valid_id = null;
@@ -67,6 +94,9 @@ watch(() => form.user_type, (newValue) => {
         form.guardian_phone_number = '';
         form.guardian_email_address = '';
         form.guardian_valid_id = null;
+        form.branch_id = '';
+    } else {
+        form.branch_id = '';
     }
     userOccupation();
 });
@@ -123,9 +153,12 @@ const submit = () => {
     if (!userContactInformation()) {
         return;
     }
-    // Ensure valid_id is null for non-Patient users
     if (form.user_type !== 'Patient') {
         form.valid_id = null;
+    }
+    if ((form.user_type === 'Dentist' || form.user_type === 'Staff') && !form.branch_id) {
+        form.errors.branch_id = 'Please select a branch.';
+        return;
     }
     console.log('Submitting form with data:', form.data());
 
@@ -151,16 +184,33 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
             <div class="grid gap-6">
                 <span class="text-red-600 italic text-sm">Fields marked with an asterisk (*) are required.</span>
                 <div class="grid gap-2">
-                    <Label for="user_type">User Type</Label>
+                    <Label for="user_type">User Type <span class="text-red-600">*</span></Label>
                     <select id="user_type" v-model="form.user_type" @change="userOccupation"
                         class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        :tabindex="0">
+                        :tabindex="0" required>
                         <option value="Patient">Patient</option>
                         <option value="Owner">Owner</option>
                         <option value="Dentist">Dentist</option>
                         <option value="Staff">Staff</option>
                     </select>
                     <InputError :message="form.errors.user_type" />
+                </div>
+                <div class="grid gap-2" v-if="form.user_type === 'Dentist' || form.user_type === 'Staff'">
+                    <Label for="branch_id">Branch <span class="text-red-600">*</span></Label>
+                    <select 
+                        id="branch_id" 
+                        v-model="form.branch_id"
+                        class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        :tabindex="0"
+                        :disabled="isLoadingBranches"
+                        required
+                    >
+                        <option value="" disabled selected>Select a branch</option>
+                        <option v-for="branch in branches" :key="branch.branch_id" :value="branch.branch_id">{{ branch.name }}</option>
+                    </select>
+                    <InputError :message="form.errors.branch_id" />
+                    <span v-if="isLoadingBranches" class="text-sm text-muted-foreground">Loading branches...</span>
+                    <span v-if="!isLoadingBranches && branches.length === 0" class="text-sm text-red-600">No branches available.</span>
                 </div>
 
                 <h1>Personal Information</h1>
@@ -312,7 +362,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="phone_number">Phone number <span class="text-red-600">*</span></Label>
+                    <Label for="phone_number">Phone Number <span class="text-red-600">*</span></Label>
                     <Input
                         id="phone_number"
                         type="tel"
@@ -388,11 +438,11 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                 </div>
 
                 <div class="grid gap-2" v-if="isPasswordValid">
-                    <Label for="password_confirmation">Confirm password <span class="text-red-600">*</span></Label>
+                    <Label for="password_confirmation">Confirm Password <span class="text-red-600">*</span></Label>
                     <div class="relative">
                         <Input id="password_confirmation" :type="showConfirmPassword ? 'text' : 'password'" required :tabindex="20"
                             autocomplete="new-password" v-model="form.password_confirmation"
-                            placeholder="Confirm password" class="pr-10" />
+                            placeholder="Confirm Password" class="pr-10" />
                         <button type="button" @click="showConfirmPassword = !showConfirmPassword" @mousedown.prevent
                             class="absolute inset-y-0 right-0 flex items-center pr-3 text-white hover:text-gray-400">
                             <Eye v-if="!showConfirmPassword" class="h-5 w-5" />
@@ -402,7 +452,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                     <InputError :message="form.errors.password_confirmation" />
                 </div>
 
-                <Button type="submit" class="mt-2 w-full" :tabindex="21" :disabled="form.processing">
+                <Button type="submit" class="mt-2 w-full" :tabindex="21" :disabled="form.processing || isLoadingBranches">
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     <span v-else>Create account</span>
                 </Button>

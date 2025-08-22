@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Users\Patient;
 use App\Models\PatientDetails\MedicalInformation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class PatientMedicalInfoController extends Controller
 {
@@ -37,10 +37,17 @@ class PatientMedicalInfoController extends Controller
             'congenital_abnormalities' => 'required|in:true,false',
         ]);
 
-        $user = Auth::user();
+        $userId = session('user_id');
+        if (!$userId) {
+            abort(403, 'Unauthorized: No patient session found.');
+        }
 
-        // Confirm the user is a patient and has a record
-        $patient = Patient::where('patient_id', $user->user_id)->firstOrFail();
+        $patient = Patient::where('patient_id', $userId)->firstOrFail();
+        $userModel = $patient->user; // Ensure Patient model has belongsTo(User::class, 'patient_id', 'user_id')
+
+        Log::info('Storing medical information for patient:', [
+            'patient_id' => $patient->patient_id,
+        ]);
 
         MedicalInformation::create([
             'medical_info_id' => (string) Str::uuid(),
@@ -55,15 +62,13 @@ class PatientMedicalInfoController extends Controller
             'congenital_abnormalities' => $request->congenital_abnormalities === 'true',
         ]);
 
-        // Clear intended URL to prevent redirect loops
         Session::forget('url.intended');
 
-        // Redirect based on contact details
         return redirect()->route(
-            $user->email_address ? 'verification.notice' : 'phone.verify'
+            $userModel && $userModel->email_address ? 'verification.notice' : 'phone.verify'
         )->with([
-            'has_email' => !empty($user->email_address),
-            'has_phone' => !empty($user->phone_number) || ($user->user_type === 'Patient' && !empty($user->guardian_phone_number)),
+            'has_email' => !empty($userModel->email_address),
+            'has_phone' => !empty($userModel->phone_number),
         ])->with('success', 'Medical information saved. Please verify your account.');
     }
 }
