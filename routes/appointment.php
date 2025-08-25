@@ -8,6 +8,7 @@ use App\Http\Controllers\Appointment\ScheduleAppointmentController;
 use App\Http\Controllers\Appointment\AppointmentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 
 Route::get('appointment', function () {
     return Inertia::render('appointment/SelectBranch');
@@ -62,7 +63,15 @@ Route::get('appointment/branch/{branch_id}/dentist/schedule', [ScheduleAppointme
     ->name('appointment.dentist.schedule');
 
 Route::post('/appointment/store', [AppointmentController::class, 'store'])->name('appointment.store');
-Route::get('/appointment/confirmation', function () {
-    return Inertia::render('appointment/ConfirmAppointment');
+Route::get('/appointment/confirmation', function (Request $request) {
+    $appointmentData = $request->session()->get('appointment');
+    if (!$appointmentData) {
+        \Illuminate\Support\Facades\Log::error('No appointment data in session for confirmation');
+        return redirect()->route('appointment.show.dentists')
+            ->with('error', 'No appointment data found. Please select again.');
+    }
+    return Inertia::render('appointment/ConfirmAppointment', [
+        'appointment' => $appointmentData,
+    ]);
 })->name('appointment.confirmation');
 Route::post('/appointment/confirm', [AppointmentController::class, 'confirm'])->name('appointment.confirm');

@@ -23,32 +23,34 @@ class AppointmentController extends Controller
      * Step 1: Store appointment request temporarily in session.
      */
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'branch_id'   => 'required|exists:branches,branch_id',
-        'dentist_id'  => 'required|exists:users,user_id',
-        'schedule_id' => 'required|exists:schedules,schedule_id',
-        'treatment_id'=> 'required|exists:treatments,treatment_id',
-    ]);
+    {
+        $validated = $request->validate([
+            'branch_id'      => 'required|exists:branches,branch_id',
+            'dentist_id'     => 'required|exists:users,user_id',
+            'schedule_id'    => 'required|exists:schedules,schedule_id',
+            'treatment_ids'  => 'required|array|min:1',
+            'treatment_ids.*'=> 'exists:treatments,treatment_id',
+        ]);
 
-    $request->session()->put('pending_appointment', $validated);
+        // Save pending appointment in session
+        $request->session()->put('pending_appointment', $validated);
 
-    if (!Auth::check()) {
-        return redirect()->route('login')
-            ->with('message', 'Please log in or sign up to confirm your appointment.');
+        // If not logged in → redirect to login
+        if (!Auth::check()) {
+            return redirect()->route('login')
+                ->with('message', 'Please log in or sign up to confirm your appointment.');
+        }
+
+        // ✅ Pass appointment data to frontend for confirmation
+        return Inertia::render('appointment/ConfirmAppointment', [
+            'appointment' => [
+                'branch_id'     => $validated['branch_id'],
+                'dentist_id'    => $validated['dentist_id'],
+                'schedule'      => Schedule::find($validated['schedule_id']),
+                'treatment_ids' => $validated['treatment_ids'], // multiple
+            ],
+        ]);
     }
-
-    // ✅ Pass appointment to frontend
-    return Inertia::render('appointment/ConfirmAppointment', [
-        'appointment' => [
-            'branch_id'   => $validated['branch_id'],
-            'dentist_id'  => $validated['dentist_id'],
-            'treatment_id'=> $validated['treatment_id'],
-            'schedule'    => \App\Models\Clinic\Schedule::find($validated['schedule_id']),
-        ],
-    ]);
-}
-
 
     /**
      * Step 2: Confirm and persist appointment in database.
@@ -97,11 +99,13 @@ class AppointmentController extends Controller
                     'appointment_created_by' => Auth::id(),
                 ]);
 
-                // Attach treatment
-                AppointmentTreatment::create([
-                    'appointment_id' => $appointment->appointment_id,
-                    'treatment_id'   => $pending['treatment_id'],
-                ]);
+                // Attach multiple treatments
+                foreach ($pending['treatment_ids'] as $treatmentId) {
+                    AppointmentTreatment::create([
+                        'appointment_id' => $appointment->appointment_id,
+                        'treatment_id'   => $treatmentId,
+                    ]);
+                }
 
                 // Mark schedule as unavailable
                 $schedule->update(['is_active' => false]);
