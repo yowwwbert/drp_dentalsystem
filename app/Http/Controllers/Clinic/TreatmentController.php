@@ -10,7 +10,7 @@ class TreatmentController extends Controller
 {
     public function getTreatments(Request $request)
     {
-        $treatments = Treatment::select('treatment_id', 'treatment_name')->get();
+        $treatments = Treatment::select('treatment_id', 'treatment_name','treatment_duration')->get();
         return response()->json($treatments);
     }
 }

@@ -40,7 +40,7 @@ class GenerateScheduleController extends Controller
             }
 
             $startDate = Carbon::today();
-            $endDate = $startDate->copy()->addDays(29); // August 10 to September 8, 2025
+            $endDate = $startDate->copy()->addDays(29); // August 25 to September 23, 2025
             $schedulesCreated = 0;
 
             DB::beginTransaction();
@@ -69,8 +69,8 @@ class GenerateScheduleController extends Controller
                     }
 
                     // Validate and set default times if null
-                    $openingTime = trim($branch->opening_time) ?: '09:00';
-                    $closingTime = trim($branch->closing_time) ?: '17:00';
+                    $openingTime = trim($branch->opening_time) ?: '09:00:00';
+                    $closingTime = trim($branch->closing_time) ?: '17:00:00';
 
                     try {
                         $startTime = Carbon::createFromFormat('H:i:s', $openingTime);
@@ -97,16 +97,17 @@ class GenerateScheduleController extends Controller
 
                         $exists = Schedule::where('branch_id', $branch->branch_id)
                             ->where('schedule_date', $currentDate->toDateString())
-                            ->where('start_time', $currentSlotStart->toDateTimeString())
-                            ->where('end_time', $currentSlotEnd->toDateTimeString())
+                            ->where('start_time', $currentSlotStart->toTimeString())
+                            ->where('end_time', $currentSlotEnd->toTimeString())
                             ->exists();
 
                         if (!$exists) {
                             $schedule = Schedule::create([
+                                'schedule_id' => \Illuminate\Support\Str::uuid()->toString(),
                                 'branch_id' => $branch->branch_id,
                                 'schedule_date' => $currentDate->toDateString(),
-                                'start_time' => $currentSlotStart->toDateTimeString(),
-                                'end_time' => $currentSlotEnd->toDateTimeString(),
+                                'start_time' => $currentSlotStart->toTimeString(),
+                                'end_time' => $currentSlotEnd->toTimeString(),
                                 'is_active' => true,
                             ]);
 
@@ -124,6 +125,8 @@ class GenerateScheduleController extends Controller
                                     DB::table('dentist_schedule')->insert([
                                         'dentist_id' => $dentistId,
                                         'schedule_id' => $schedule->schedule_id,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
                                     ]);
                                 }
                                 Log::info("Assigned " . count($dentists) . " dentists to schedule ID {$schedule->schedule_id}.");
@@ -154,7 +157,7 @@ class GenerateScheduleController extends Controller
 
             return response()->json([
                 'message' => 'Failed to generate schedules.',
-                'error' => 'An error occurred. Please check logs for details.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

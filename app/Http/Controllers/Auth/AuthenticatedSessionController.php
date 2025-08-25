@@ -13,6 +13,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\Pivot\AppointmentTreatment;
 use App\Models\Clinic\Schedule;
+use App\Models\Clinic\Branches;
+use App\Models\Users\User;
+use App\Models\Clinic\Treatment;
+
 
 class AuthenticatedSessionController extends Controller
 {
@@ -37,49 +41,57 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
-        $request->session()->regenerate();
+  public function store(LoginRequest $request): RedirectResponse|\Inertia\Response
+{
+    $request->authenticate();
+    $request->session()->regenerate();
 
-        if ($request->session()->has('pending_appointment')) {
-            $user = Auth::user();
-            if ($user->user_type !== 'Patient') {
-                $request->session()->forget('pending_appointment');
-                return redirect()->route('dashboard')->with('error', 'Only patients can book appointments.');
-            }
+    // If there's a pending appointment, redirect to confirmation
+    if ($request->session()->has('pending_appointment')) {
+        $user = Auth::user();
 
-            $pendingAppointment = $request->session()->get('pending_appointment');
-            $appointment = new Appointment();
-            $appointment->patient_id = Auth::id();
-            $appointment->dentist_id = $pendingAppointment['dentist_id'];
-            $appointment->schedule_id = $pendingAppointment['schedule_id'];
-            $appointment->branch_id = $pendingAppointment['branch_id'];
-            $appointment->status = 'Scheduled';
-            $appointment->status_changed_by = Auth::id();
-            $appointment->appointment_created_by = Auth::id();
-            $appointment->save();
-
-            // Attach treatment_id to the appointment_treatments pivot table
-            $treatment = new AppointmentTreatment();
-            $treatment->appointment_id = $appointment->appointment_id;
-            $treatment->treatment_id = $pendingAppointment['treatment_id'];
-            $treatment->save();
-
-            // Set the schedule's is_active to false
-            $schedule = Schedule::find($pendingAppointment['schedule_id']);
-            if ($schedule) {
-                $schedule->is_active = false;
-                $schedule->save();
-            }
-
-            $request->session()->forget(['pending_appointment', 'selected_branch_id', 'selected_dentist_id', 'selected_treatment_id']);
-            
-            return redirect()->route('appointment.success')->with('message', 'Appointment booked successfully!');
+        if ($user->user_type !== 'Patient') {
+            $request->session()->forget('pending_appointment');
+            return redirect()->route('dashboard')
+                ->with('error', 'Only patients can book appointments.');
         }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Retrieve appointment details from session
+        $appointment = $request->session()->pull('pending_appointment');
+
+        // Load related models for richer details
+        $branch    = Branches::find($appointment['branch_id']);
+        $dentist   = User::find($appointment['dentist_id']);
+        $treatment = Treatment::find($appointment['treatment_id']);
+        $schedule  = Schedule::find($appointment['schedule_id']);
+
+        // Build enriched appointment object for Vue
+        $appointmentData = [
+            'branch_id'   => $branch->branch_id,
+            'branch_name' => $branch->name ?? null,
+
+            'dentist_id'   => $dentist->user_id,
+            'dentist_name' => $dentist->name ?? null,
+
+            'treatment_id'   => $treatment->treatment_id,
+            'treatment_name' => $treatment->name ?? null,
+
+            'schedule' => [
+                'schedule_id'   => $schedule->schedule_id,
+                'schedule_date' => $schedule->schedule_date,
+                'start_time'    => $schedule->start_time,
+                'end_time'      => $schedule->end_time,
+            ],
+        ];
+
+        return inertia('appointment/ConfirmAppointment', [
+            'appointment' => $appointmentData,
+        ]);
     }
+
+    return redirect()->intended(route('dashboard', absolute: false));
+}
+
 
     public function destroy(Request $request): RedirectResponse
     {

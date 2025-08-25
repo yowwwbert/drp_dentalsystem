@@ -2,18 +2,15 @@
 import { Label } from '@/components/ui/label';
 import AppointmentLayout from '@/layouts/form/AppointmentLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { LoaderCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { route } from 'ziggy-js';
 
 interface AppointmentDetails {
   branch_id: string;
-  branch_name?: string;
   dentist_id: string;
-  dentist_name?: string;
   treatment_id: string;
-  treatment_name?: string;
   schedule: {
     schedule_id: string;
     schedule_date: string;
@@ -29,6 +26,11 @@ const props = defineProps<{
 
 const errorMessage = ref<string>('');
 
+// ✅ Log what is received from backend
+onMounted(() => {
+  console.log('[ConfirmAppointment] Received props.appointment:', props.appointment);
+});
+
 const form = useForm({
   branch_id: props.appointment.branch_id,
   dentist_id: props.appointment.dentist_id,
@@ -36,22 +38,27 @@ const form = useForm({
   schedule_id: props.appointment.schedule.schedule_id,
 });
 
+// ✅ Log what will be sent before submitting
 const submitForm = () => {
-  form.post(route('appointment.save'), {
+  console.log('[ConfirmAppointment] Sending form data to appointment.store:', form.data());
+
+  form.post(route('appointment.confirm'), {
     preserveState: true,
     preserveScroll: true,
     forceFormData: true,
     onSuccess: () => {
-      console.log('Appointment confirmed successfully');
+      console.log('[ConfirmAppointment] Appointment confirmed successfully');
     },
     onError: (errors) => {
-      console.error('Confirmation errors:', errors);
-      errorMessage.value = 'Failed to confirm appointment: ' + Object.values(errors).join(', ');
+      console.error('[ConfirmAppointment] Confirmation errors:', errors);
+      errorMessage.value =
+        'Failed to confirm appointment: ' + Object.values(errors).join(', ');
     },
   });
 };
 
 const cancel = () => {
+  console.log('[ConfirmAppointment] Cancel clicked, posting back to appointment route');
   form.post(route('appointment'), {
     preserveState: true,
     preserveScroll: true,
@@ -59,6 +66,7 @@ const cancel = () => {
   });
 };
 </script>
+
 
 <template>
   <AppointmentLayout
@@ -74,19 +82,19 @@ const cancel = () => {
       <div>
         <Label class="text-sm font-medium">Branch</Label>
         <p class="border rounded-lg p-2 w-full dark:bg-gray-800 dark:border-gray-600">
-          {{ props.appointment.branch_name || 'Branch ID: ' + props.appointment.branch_id }}
+          {{ 'Branch ID: ' + props.appointment.branch_id }}
         </p>
       </div>
       <div>
         <Label class="text-sm font-medium">Dentist</Label>
         <p class="border rounded-lg p-2 w-full dark:bg-gray-800 dark:border-gray-600">
-          {{ props.appointment.dentist_name || 'Dentist ID: ' + props.appointment.dentist_id }}
+          {{ 'Dentist ID: ' + props.appointment.dentist_id }}
         </p>
       </div>
       <div>
         <Label class="text-sm font-medium">Treatment</Label>
         <p class="border rounded-lg p-2 w-full dark:bg-gray-800 dark:border-gray-600">
-          {{ props.appointment.treatment_name || 'Treatment ID: ' + props.appointment.treatment_id }}
+          {{ 'Treatment ID: ' + props.appointment.treatment_id }}
         </p>
       </div>
       <div>

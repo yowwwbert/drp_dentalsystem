@@ -5,6 +5,7 @@ use App\Http\Controllers\Appointment\DentistAppointmentController;
 use App\Http\Controllers\Clinic\GenerateScheduleController;
 use App\Http\Controllers\Clinic\TreatmentController;
 use App\Http\Controllers\Appointment\ScheduleAppointmentController;
+use App\Http\Controllers\Appointment\AppointmentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -30,22 +31,23 @@ Route::get('appointment/show-dentists', function () {
         'branch_id' => $branch_id,
     ]);
 })->name('appointment.show.dentists');
-
 Route::get('appointment/show-date-time', function () {
     $branch_id = session('selected_branch_id');
     $dentist_id = session('selected_dentist_id');
-    $treatment_id = session('selected_treatment_id');
+    $treatment_ids = session('selected_treatment_ids'); // ✅ array now
 
-    if (!$branch_id || !$dentist_id || !$treatment_id) {
-        return redirect()->route('appointment.show.dentists')->with('error', 'Please select a dentist and treatment.');
+    if (!$branch_id || !$dentist_id || empty($treatment_ids)) {
+        return redirect()->route('appointment.show.dentists')
+            ->with('error', 'Please select a dentist and at least one treatment.');
     }
 
     return Inertia::render('appointment/SelectDateAndTime', [
         'branch_id' => $branch_id,
         'dentist_id' => $dentist_id,
-        'treatment_id' => $treatment_id,
+        'treatment_ids' => $treatment_ids, // ✅ pass array
     ]);
 })->name('appointment.show.date-time');
+
 
 Route::get('appointment/branch/{branch_id}/dentist', [DentistAppointmentController::class, 'getDentistsForBranch'])
     ->name('appointment.dentists');
@@ -59,9 +61,8 @@ Route::post('/generate-schedule', [GenerateScheduleController::class, 'generate'
 Route::get('appointment/branch/{branch_id}/dentist/schedule', [ScheduleAppointmentController::class, 'getDentistSchedule'])
     ->name('appointment.dentist.schedule');
 
-Route::post('appointment/schedule', [ScheduleAppointmentController::class, 'store'])
-    ->name('appointment.store');
-
-    Route::get('/appointment/confirm', [ScheduleAppointmentController::class, 'confirm'])->name('appointment.confirm');
-Route::post('/appointment/save', [ScheduleAppointmentController::class, 'save'])->name('appointment.save');
-Route::get('/appointment/success', fn() => Inertia::render('appointment/Success'))->name('appointment.success');
+Route::post('/appointment/store', [AppointmentController::class, 'store'])->name('appointment.store');
+Route::get('/appointment/confirmation', function () {
+    return Inertia::render('appointment/ConfirmAppointment');
+})->name('appointment.confirmation');
+Route::post('/appointment/confirm', [AppointmentController::class, 'confirm'])->name('appointment.confirm');

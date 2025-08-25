@@ -22,7 +22,7 @@ interface Schedule {
 const props = defineProps<{
     branch_id?: string | null;
     dentist_id?: string | null;
-    treatment_id?: string | null;
+    treatment_ids?: string[] | null; // ✅ now array
 }>();
 
 const schedules = ref<Schedule[]>([]);
@@ -31,7 +31,7 @@ const form = useForm({
     branch_id: props.branch_id || sessionStorage.getItem('selected_branch_id') || '',
     dentist_id: props.dentist_id || sessionStorage.getItem('selected_dentist_id') || '',
     schedule_id: '',
-    treatment_id: props.treatment_id || sessionStorage.getItem('selected_treatment_id') || '',
+    treatment_id: props.treatment_ids || sessionStorage.getItem('selected_treatment_id') || '',
 });
 
 const selectedDate = ref<string>('');

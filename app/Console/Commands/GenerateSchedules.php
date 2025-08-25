@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class GenerateSchedules extends Command
 {
     protected $signature = 'schedules:generate';
-    protected $description = 'Maintain 30-day schedules for all branches by adding new days with 1-hour slots and removing expired schedules';
+    protected $description = 'Maintain 30-day schedules for all branches by adding new days with 1-hour slots and removing expired unbooked schedules';
 
     public function handle()
     {
@@ -28,11 +28,14 @@ class GenerateSchedules extends Command
             }
 
             $today = Carbon::today();
-            $endDate = $today->copy()->addDays(29); // August 10 to September 8, 2025
+            $endDate = $today->copy()->addDays(29); // August 25 to September 23, 2025
             $this->info("Generating schedules from {$today->toDateString()} to {$endDate->toDateString()}");
 
-            $deleted = Schedule::where('schedule_date', '<', $today->toDateString())->delete();
-            $this->info("Deleted {$deleted} expired schedules.");
+            // Delete only unbooked (is_active = true) schedules before today
+            $deleted = Schedule::where('schedule_date', '<', $today->toDateString())
+                ->where('is_active', true)
+                ->delete();
+            $this->info("Deleted {$deleted} expired unbooked schedules.");
 
             DB::beginTransaction();
             $schedulesCreated = 0;
@@ -64,8 +67,8 @@ class GenerateSchedules extends Command
                     // Validate and set default times if null
                     $openingTimeRaw = $branch->opening_time;
                     $closingTimeRaw = $branch->closing_time;
-                    $openingTime = trim($openingTimeRaw) ?: '09:00';
-                    $closingTime = trim($closingTimeRaw) ?: '17:00';
+                    $openingTime = trim($openingTimeRaw) ?: '09:00:00';
+                    $closingTime = trim($closingTimeRaw) ?: '17:00:00';
 
                     try {
                         $startTime = Carbon::createFromFormat('H:i:s', $openingTime);
@@ -92,16 +95,17 @@ class GenerateSchedules extends Command
 
                         $exists = Schedule::where('branch_id', $branch->branch_id)
                             ->where('schedule_date', $currentDate->toDateString())
-                            ->where('start_time', $currentSlotStart->toDateTimeString())
-                            ->where('end_time', $currentSlotEnd->toDateTimeString())
+                            ->where('start_time', $currentSlotStart->toTimeString())
+                            ->where('end_time', $currentSlotEnd->toTimeString())
                             ->exists();
 
                         if (!$exists) {
                             $schedule = Schedule::create([
+                                'schedule_id' => \Illuminate\Support\Str::uuid()->toString(),
                                 'branch_id' => $branch->branch_id,
                                 'schedule_date' => $currentDate->toDateString(),
-                                'start_time' => $currentSlotStart->toDateTimeString(),
-                                'end_time' => $currentSlotEnd->toDateTimeString(),
+                                'start_time' => $currentSlotStart->toTimeString(),
+                                'end_time' => $currentSlotEnd->toTimeString(),
                                 'is_active' => true,
                             ]);
 
@@ -116,12 +120,23 @@ class GenerateSchedules extends Command
                             // Auto-assign dentists to the generated schedule
                             if (!empty($dentists)) {
                                 foreach ($dentists as $dentistId) {
-                                    DB::table('dentist_schedule')->insert([
-                                        'dentist_id' => $dentistId,
-                                        'schedule_id' => $schedule->schedule_id,
-                                    ]);
+                                    // Check if this dentist already has a schedule at this date and time
+                                    $alreadyAssigned = DB::table('dentist_schedule')
+                                        ->join('schedules', 'dentist_schedule.schedule_id', '=', 'schedules.schedule_id')
+                                        ->where('dentist_schedule.dentist_id', $dentistId)
+                                        ->where('schedules.schedule_date', $currentDate->toDateString())
+                                        ->where('schedules.start_time', $currentSlotStart->toTimeString())
+                                        ->where('schedules.end_time', $currentSlotEnd->toTimeString())
+                                        ->exists();
+
+                                    if (!$alreadyAssigned) {
+                                        DB::table('dentist_schedule')->insert([
+                                            'dentist_id' => $dentistId,
+                                            'schedule_id' => $schedule->schedule_id,
+                                        ]);
+                                    }
                                 }
-                                $this->info("Assigned " . count($dentists) . " dentists to schedule ID {$schedule->schedule_id}.");
+                                $this->info("Assigned " . count($dentists) . " dentists to schedule ID {$schedule->schedule_id} (no duplicate assignments).");
                             }
                         }
 
@@ -138,6 +153,7 @@ class GenerateSchedules extends Command
             return 0;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Failed to maintain schedules: ' . $e->getMessage());
             $this->error('Failed to maintain schedules: ' . $e->getMessage());
             return 1;
         }

@@ -20,21 +20,24 @@ class DentistAppointmentController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'branch_id' => 'required|exists:branches,branch_id',
-            'dentist_id' => 'required|exists:users,user_id',
-            'treatment_id' => 'required|exists:treatments,treatment_id',
-        ]);
+{
+    $validated = $request->validate([
+        'branch_id' => 'required|exists:branches,branch_id',
+        'dentist_id' => 'required|exists:users,user_id',
+        'treatment_ids' => 'required|array|min:1|max:2',
+        'treatment_ids.*' => 'exists:treatments,treatment_id',
+    ]);
 
-        Log::info('Initial Appointment stored:', $validated);
+    Log::info('Initial Appointment stored:', $validated);
 
-        session([
-            'selected_dentist_id' => $validated['dentist_id'],
-            'selected_treatment_id' => $validated['treatment_id'],
-            'selected_branch_id' => $validated['branch_id'], // Ensure branch_id is in session
-        ]);
+    session([
+        'selected_branch_id' => $validated['branch_id'],
+        'selected_dentist_id' => $validated['dentist_id'],
+        'selected_treatment_ids' => $validated['treatment_ids'], // ✅ array in session
+    ]);
 
-        return redirect()->route('appointment.show.date-time');
-    }
+    return redirect()->route('appointment.show.date-time');
+}
+
+
 }
