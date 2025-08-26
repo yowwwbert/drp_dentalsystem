@@ -5,7 +5,6 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
 import { Bell, Plus, ChevronDown } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
-import dashboardDataJson from '../tempData/dashboardData.json';
 import type { Auth } from '@/types';
 
 const page = usePage<{ auth: Auth }>();
@@ -97,7 +96,7 @@ const userPosition = computed(() => {
                     <Plus :size="16" />
                     Add Appointment
                 </Link>
-                <Link href="appointment/select-date-and-time" class="p-2 text-gray-600 hover:text-gray-800">
+                <Link href="/Appointment" class="p-2 text-gray-600 hover:text-gray-800">
                     <Bell :size="20" />
                 </Link>
                 <div class="flex items-center gap-2">
