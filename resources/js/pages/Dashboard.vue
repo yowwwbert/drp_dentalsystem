@@ -97,7 +97,7 @@ const userPosition = computed(() => {
                     <Plus :size="16" />
                     Add Appointment
                 </Link>
-                <Link href="#" class="p-2 text-gray-600 hover:text-gray-800">
+                <Link href="appointment/select-date-and-time" class="p-2 text-gray-600 hover:text-gray-800">
                     <Bell :size="20" />
                 </Link>
                 <div class="flex items-center gap-2">

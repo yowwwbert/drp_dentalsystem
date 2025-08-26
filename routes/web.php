@@ -17,6 +17,15 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     Route::get('/', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_dashboard');
     })->name('owner.dashboard');
+    
+    // API endpoints for dashboard data
+    Route::get('/api/dashboard-data', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'index'])->name('owner.dashboard.data');
+    Route::get('/api/appointments', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'getAppointments'])->name('owner.appointments.data');
+    Route::get('/api/billing', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'getBilling'])->name('owner.billing.data');
+    Route::get('/api/dentists', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'getDentists'])->name('owner.dentists.data');
+    Route::get('/api/staff', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'getStaff'])->name('owner.staff.data');
+    Route::get('/api/branches', [App\Http\Controllers\Dashboard\OwnerDashboardController::class, 'getBranches'])->name('owner.branches.data');
+    
     Route::get('/appointments/AppointmentList', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_AppointmentList');
     })->name('owner.appointments');
