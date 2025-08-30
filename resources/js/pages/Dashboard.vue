@@ -5,7 +5,6 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
 import { Bell, Plus, ChevronDown } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
-import dashboardDataJson from '../tempData/dashboardData.json';
 import type { Auth } from '@/types';
 
 const page = usePage<{ auth: Auth }>();
@@ -18,11 +17,44 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-// Import data from JSON file
-const dashboardData = ref(dashboardDataJson);
+
+// Dashboard data structure - will be populated from API
+interface AppointmentOverview {
+    date: string;
+    completed: number;
+    cancelled: number;
+    total: number;
+}
+
+interface ScheduledAppointment {
+    patientName: string;
+    date: string;
+    startTime: string;
+    branch: string;
+}
+
+interface DashboardData {
+    appointments: {
+        pending: number;
+        completed: number;
+        cancelled: number;
+        overview: AppointmentOverview[];
+    };
+    scheduledAppointments: ScheduledAppointment[];
+}
+
+const dashboardData = ref<DashboardData>({
+    appointments: {
+        pending: 0,
+        completed: 0,
+        cancelled: 0,
+        overview: []
+    },
+    scheduledAppointments: []
+});
 
 // Chart data for analytics
-const chartData = ref(dashboardData.value.appointments.overview);
+const chartData = computed(() => dashboardData.value.appointments.overview);
 
 // Sorting functionality for appointments table
 const sortField = ref('patientName');
@@ -97,7 +129,7 @@ const userPosition = computed(() => {
                     <Plus :size="16" />
                     Add Appointment
                 </Link>
-                <Link href="#" class="p-2 text-gray-600 hover:text-gray-800">
+                <Link href="/Appointment" class="p-2 text-gray-600 hover:text-gray-800">
                     <Bell :size="20" />
                 </Link>
                 <div class="flex items-center gap-2">

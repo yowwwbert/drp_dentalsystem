@@ -50,7 +50,11 @@ class Appointment extends Model
     public function branch()
     {
         return $this->belongsTo('App\Models\Clinic\Branches', 'branch_id', 'branch_id');
-    
+    }
+
+    public function patient()
+    {
+        return $this->belongsTo('App\Models\Users\Patient', 'patient_id', 'patient_id');
     }
     
 

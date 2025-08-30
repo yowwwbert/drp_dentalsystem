@@ -3,6 +3,9 @@
 namespace App\Models\Clinic;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Appointment\Appointment;
+use App\Models\Users\Dentist;
+use App\Models\Users\Staff;
 
 class Branches extends Model
 {
@@ -45,5 +48,22 @@ class Branches extends Model
         'branch_id' => 'string',
         'operating_days' => 'array'
     ];
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class, 'branch_id', 'branch_id');
+    }
+
+    public function dentists()
+    {
+        return $this->belongsToMany(Dentist::class, 'user_branch', 'branch_id', 'user_id')
+            ->where('user_type', 'dentist');
+    }
+
+    public function staff()
+    {
+        return $this->belongsToMany(Staff::class, 'user_branch', 'branch_id', 'user_id')
+            ->where('user_type', 'staff');
+    }
 }
 

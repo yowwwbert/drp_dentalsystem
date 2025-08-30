@@ -3,6 +3,7 @@
 namespace App\Models\Users;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Clinic\Branches;
 
 class Dentist extends Model
 {
@@ -20,5 +21,10 @@ class Dentist extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'dentist_id', 'user_id');
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branches::class, 'user_branch', 'user_id', 'branch_id');
     }
 }
