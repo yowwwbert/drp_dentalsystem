@@ -68,93 +68,60 @@ onMounted(async () => {
 </script>
 
 <template>
-
-  <Head title="Patient Records" />
-
-  <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-900">Patient Records</h1>
-        <div class="flex justify-end items-center mb-2 rounded-md">
-          <input v-model="searchQuery" type="text" placeholder="Search patient"
-            class="border-1 border-[#1E4F4F] rounded-xl px-3 py-1 w-64 focus:outline-none focus:ring-2 focus:ring-green-900" />
+    <Head title="Patient Records" />
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div class="flex flex-col gap-4 rounded-xl p-4 bg-gray-50 min-h-screen relative">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-4">
+                <h1 class="text-3xl font-bold text-gray-900">Patient Records</h1>
+                <div class="flex flex-1 justify-end items-center gap-2">
+                  <input 
+                  v-model="searchQuery" type="text" 
+                  placeholder="Search by name..." class="border border-gray-300 rounded px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-teal-900" />
+                </div>
+              </div>
+                <div class="bg-white rounded-xl shadow p-0 overflow-x-auto">
+                  <table class="w-full min-w-[900px] border-separate border-spacing-0">
+                    <thead>
+                      <tr class="bg-teal-900 text-white">
+                        <th class="px-3 py-4 text-left font-semibold">ID</th>
+                        <th class="px-3 py-4 text-left font-semibold">Name</th>
+                        <th class="px-3 py-4 font-semibold text-left">Email</th>
+                        <th class="px-3 py-4 font-semibold text-left">Phone</th>
+                        <th class="px-3 py-4 font-semibold text-left">Age</th>
+                        <th class="px-3 py-4 font-semibold text-left">Sex</th>
+                        <th class="px-3 py-4 font-semibold text-left">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="patient in paginatedPatients" :key="patient.id" class="border-b last:border-b-0 hover:bg-gray-50">
+                        <td class="px-4 py-3">{{ patient.id }}</td>
+                        <td class="px-4 py-3">{{ patient.name }}</td>
+                        <td class="px-4 py-3">{{ patient.email }}</td>
+                        <td class="px-4 py-3">{{ patient.phone }}</td>
+                        <td class="px-4 py-3">{{ patient.age }}</td>
+                        <td class="px-4 py-3">{{ patient.sex }}</td>
+                        <td class="px-4 py-3">
+                          <button class="bg-teal-900 text-white px-4 py-1 rounded hover:bg-teal-700 transition">View</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-4">
+                  <div>
+                    <label class="text-sm text-gray-700 mr-2">Rows per page:</label>
+                    <select v-model="rowsPerPage" class="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-900">
+                      <option :value="10">10</option>
+                      <option :value="25">25</option>
+                      <option :value="50">50</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button @click="prevPage" :disabled="currentPage === 1" class="border border-gray-300 rounded px-3 py-1 text-lg text-gray-700 bg-white disabled:opacity-50">&lt;</button>
+                    <span>Page {{ currentPage }} of {{ totalPages }}</span>
+                    <button @click="nextPage" :disabled="currentPage === totalPages" class="border border-gray-300 rounded px-3 py-1 text-lg text-gray-700 bg-white disabled:opacity-50">&gt;</button>
+                  </div>
+                </div>
         </div>
-      </div>
-
-      <div v-if="isLoading" class="text-center py-4 text-gray-500">
-        Loading patients...
-      </div>
-
-      <div v-else-if="error" class="text-center py-4 text-red-500">
-        {{ error }}
-      </div>
-
-      <div v-else class="bg-white rounded-lg shadow-md p-6">
-
-
-        <div class="overflow-x-auto">
-          <table class="min-w-full bg-white shadow overflow-hidden">
-            <thead>
-              <tr class="bg-[#1E4F4F] text-white rounded-t-lg">
-                <th class="px-4 py-2 text-left">Name</th>
-                <th class="px-4 py-2 text-left">Email Address</th>
-                <th class="px-4 py-2 text-left">Phone Number</th>
-                <th class="px-4 py-2 text-left">Last Visit</th>
-                <th class="px-4 py-2 text-left">Balance</th>
-                <th class="px-2 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="patient in paginatedPatients" :key="patient.patient_id" class="border-b hover:bg-gray-50">
-                <td class="px-4 py-2">{{ patient.last_name || 'N/A' }}, {{ patient.first_name || 'N/A' }}</td>
-                <td class="px-4 py-2">{{ patient.email_address || 'N/A' }}</td>
-                <td class="px-4 py-2">{{ patient.phone_number || 'N/A' }}</td>
-                <td class="px-4 py-2">
-                  {{ patient.created_at ? new Date(patient.created_at).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                  year: 'numeric'
-                  }) : 'N/A' }}
-                </td>
-                <td class="px-4 py-2">₱ {{ patient.balance || 0 }} </td>
-                <td class=" py-2">
-                  <button class="bg-[#3E7F7B] text-white px-8 py-2 rounded-lg">View</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-if="filteredPatients.length === 0" class="text-center py-4 text-gray-500">
-          No patients found.
-        </div>
-
-        <div class="flex items-center justify-between mt-4">
-          <div>
-            <label class="mr-2 text-gray-700">Rows per page:</label>
-            <select v-model="rowsPerPage"
-              class="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-900">
-              <option :value="10">10</option>
-              <option :value="25">25</option>
-              <option :value="50">50</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button @click="prevPage" :disabled="currentPage === 1"
-              class="px-2 py-1 rounded border disabled:opacity-50 hover:bg-gray-100 transition-colors">
-              &lt;
-            </button>
-            <span class="text-gray-700">
-              Page {{ currentPage }} of {{ totalPages }}
-            </span>
-            <button @click="nextPage" :disabled="currentPage === totalPages"
-              class="px-2 py-1 rounded border disabled:opacity-50 hover:bg-gray-100 transition-colors">
-              &gt;
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </AppLayout>
-</template>
+    </AppLayout>
+</template> 

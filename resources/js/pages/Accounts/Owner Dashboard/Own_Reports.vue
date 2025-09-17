@@ -183,27 +183,23 @@ const handleGenerateReport = () => {
 
 <template>
     <Head title="Reports" />
-
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-gray-900">Reports</h1>
+        <div class="flex flex-col gap-4 rounded-xl p-4 bg-gray-50 min-h-screen relative">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-3xl font-bold text-gray-900">Reports</h1>
             </div>
-            
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">Reports Management</h2>
                 <form class="space-y-3">
                     <div class="flex gap-4 mb-2">
                         <div class="flex-1">
-                            <label class="block text-sm font-medium">Report Type</label>
-                            <select class="w-full border rounded px-2 py-1" v-model="selectedReportType">
+                            <label class="font-medium mr-2 text-gray-700">Report Type</label>
+                            <select class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900" v-model="selectedReportType">
                                 <option>Patient Report</option>
                                 <option>Appointment Report</option>
                             </select>
                         </div>
                         <div class="flex-1">
-                            <label class="block text-sm font-medium">Period</label>
-                            <select class="w-full border rounded px-2 py-1">
+                            <label class="font-medium mr-2 text-gray-700">Period</label>
+                            <select class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900">
                                 <option>Week</option>
                                 <option>Month</option>
                             </select>
@@ -211,20 +207,20 @@ const handleGenerateReport = () => {
                     </div>
                     <div class="flex gap-4 mb-2">
                         <div class="flex-1">
-                            <label class="block text-sm font-medium">Start Date</label>
-                            <input type="date" class="w-full border rounded px-2 py-1" placeholder="dd/mm/yyyy" v-model="startDate" />
+                            <label class="font-medium mr-2 text-gray-700">Start Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-teal-900" placeholder="dd/mm/yyyy" v-model="startDate" />
                         </div>
                         <div class="flex-1">
-                            <label class="block text-sm font-medium">End Date</label>
-                            <input type="date" class="w-full border rounded px-2 py-1" placeholder="dd/mm/yyyy" v-model="endDate" />
+                            <label class="font-medium mr-2 text-gray-700">End Date</label>
+                            <input type="date" class="w-full border border-gray-300 rounded px-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-teal-900" placeholder="dd/mm/yyyy" v-model="endDate" />
                         </div>
                     </div>
-                    <button type="button" class="bg-green-600 text-white px-4 py-2 rounded" @click="handleGenerateReport">Generate Report</button>
+                    <button type="button" class="bg-teal-900 text-white px-4 py-2 rounded mt-4 hover:bg-teal-700 transition" @click="handleGenerateReport">Generate Report</button>
                 </form>
                 <div v-if="showPreview" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
                     <div class="bg-white rounded-lg shadow-lg p-6 min-w-[400px] relative">
                         <h3 class="font-bold mb-4 text-lg">{{ selectedReportType }}</h3>
-                        <div v-if="!hasReportData" class="text-center py-8 text-gray-500">
+                        <div v-if="!hasReportData" class="text-center py-8 text-gray-700">
                             <p class="text-lg">No reports available</p>
                             <p class="text-sm mt-2">No data found for the selected date range.</p>
                         </div>
@@ -268,13 +264,12 @@ const handleGenerateReport = () => {
                             </tbody>
                         </table>
                         <div class="flex gap-2 mt-4">
-                            <button @click="handlePreview" class="bg-green-500 text-white px-4 py-2 rounded">Preview</button>
+                            <button @click="handlePreview" class="bg-teal-900 text-white px-4 py-2 rounded">Preview</button>
                             <button @click="handleDownloadPDF" class="bg-blue-600 text-white px-4 py-2 rounded">Download as PDF</button>
                             <button @click="handleDownloadExcel" class="bg-green-700 text-white px-4 py-2 rounded">Download as Excel</button>
                         </div>
                     </div>
                 </div>
-            </div>
         </div>
     </AppLayout>
 </template> 
