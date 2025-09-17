@@ -20,7 +20,7 @@ withDefaults(defineProps<Props>(), {
         <AppSidebar />
         
         <!-- Content area -->
-        <div class="flex-1 p-4 md:p-6 bg-gray-200 overflow-auto">
+        <div class="flex-1 px-8 bg-gray-200 overflow-auto">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </div>

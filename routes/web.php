@@ -63,7 +63,7 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     })->name('owner.data');
     
     Route::get('/records/UserDetails', function () {
-        $user = auth()->user();
+        $user = \Illuminate\Support\Facades\Auth::user();
         $owner = \App\Models\Users\Owner::where('owner_id', $user->user_id)->first();
         
         // Get user details with related data
@@ -141,3 +141,4 @@ Route::get('contact', function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/appointment.php';
+require __DIR__.'/dashboard.php';

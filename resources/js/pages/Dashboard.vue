@@ -1,104 +1,151 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, Link } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
-import { Bell, Plus, ChevronDown } from 'lucide-vue-next';
-import { Link } from '@inertiajs/vue3';
-import dashboardDataJson from '../tempData/dashboardData.json';
+import { Bell, Plus } from 'lucide-vue-next';
+import axios from 'axios';
 import type { Auth } from '@/types';
+
+// Interfaces
+interface AppointmentOverview {
+    date: string;
+    completed: number;
+    cancelled: number;
+    scheduled: number;
+}
+
+interface ScheduledAppointment {
+    patient_name: string;
+    schedule_date: string;
+    start_time: string;
+    branch_name: string;
+}
+
+interface DashboardData {
+    appointments: {
+        scheduled: number;
+        completed: number;
+        cancelled: number;
+        overview: AppointmentOverview[];
+    };
+    scheduledAppointments: ScheduledAppointment[];
+}
 
 const page = usePage<{ auth: Auth }>();
 const user = computed(() => page.props.auth.user);
+const userType = computed(() => user.value?.user_type || 'User');
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
+    { title: 'Dashboard', href: '/dashboard' },
 ];
 
-// Import data from JSON file
-const dashboardData = ref(dashboardDataJson);
+// State
+const dashboardData = ref<DashboardData>({
+    appointments: {
+        scheduled: 0,
+        completed: 0,
+        cancelled: 0,
+        overview: [],
+    },
+    scheduledAppointments: [],
+});
 
-// Chart data for analytics
-const chartData = ref(dashboardData.value.appointments.overview);
+// Fetch backend data
+onMounted(async () => {
+    try {
+        const response = await axios.get(route('dashboard.data'));
+        dashboardData.value = response.data;
+        console.log('Dashboard data:', JSON.stringify(dashboardData.value, null, 2));
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+    }
+});
 
-// Sorting functionality for appointments table
-const sortField = ref('patientName');
-const sortDirection = ref('asc');
+// Chart data
+const chartData = computed(() => dashboardData.value.appointments.overview);
 
-const sortAppointments = (field: string) => {
-  if (sortField.value === field) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortField.value = field;
-    sortDirection.value = 'asc';
-  }
+// Max chart value for scaling
+const maxChartValue = computed(() => {
+    const max = Math.max(
+        ...chartData.value.flatMap(data => [data.completed || 0, data.cancelled || 0, data.scheduled || 0]),
+        1
+    );
+    // Round up to the next multiple of 10 for dynamic scaling
+    return Math.ceil(max / 10) * 10;
+});
+
+// Sorting
+const sortField = ref<keyof ScheduledAppointment>('patient_name');
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
+const sortAppointments = (field: keyof ScheduledAppointment) => {
+    if (sortField.value === field) {
+        sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortField.value = field;
+        sortDirection.value = 'asc';
+    }
 };
 
 const sortedAppointments = computed(() => {
-  const appointments = [...dashboardData.value.scheduledAppointments];
-  
-  return appointments.sort((a, b) => {
-    let aValue: any = a[sortField.value as keyof typeof a];
-    let bValue: any = b[sortField.value as keyof typeof b];
-    
-    // Handle date sorting
-    if (sortField.value === 'date') {
-      aValue = new Date(aValue as string).getTime();
-      bValue = new Date(bValue as string).getTime();
-    }
-    
-    // Handle time sorting
-    if (sortField.value === 'startTime') {
-      aValue = new Date(`2000-01-01 ${aValue}`).getTime();
-      bValue = new Date(`2000-01-01 ${bValue}`).getTime();
-    }
-    
-    if (sortDirection.value === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? -1 : 1;
-    }
-  });
+    const appointments = [...dashboardData.value.scheduledAppointments];
+
+    return appointments.sort((a, b) => {
+        let aValue: any = a[sortField.value];
+        let bValue: any = b[sortField.value];
+
+        if (sortField.value === 'schedule_date') {
+            aValue = new Date(aValue as string).getTime();
+            bValue = new Date(bValue as string).getTime();
+        }
+        if (sortField.value === 'start_time') {
+            aValue = new Date(`2000-01-01 ${aValue}`).getTime();
+            bValue = new Date(`2000-01-01 ${bValue}`).getTime();
+        }
+
+        return sortDirection.value === 'asc'
+            ? aValue > bValue ? 1 : -1
+            : aValue < bValue ? -1 : 1;
+    });
 });
 
-// Get user's first name for welcome message
-const userFirstName = computed(() => {
-    if (user.value?.first_name) {
-        return user.value.first_name;
-    }
-    return 'User';
-});
+// User details
+const userFirstName = computed(() => user.value?.first_name || 'User');
+const userPosition = computed(() => user.value?.user_type || 'User');
 
-// Get user's position/role
-const userPosition = computed(() => {
-    return user.value?.user_type || 'User';
+// Permissions
+const canAddPatients = computed(() => ['Owner', 'Staff'].includes(userType.value));
+const canAddAppointments = computed(() => ['Owner', 'Staff', 'Patient'].includes(userType.value));
+
+const appointmentListRoute = computed(() => {
+    const basePath = `/dashboard/${userType.value.toLowerCase()}/appointments/AppointmentList`;
+    return userType.value === 'Patient' ? '/dashboard' : basePath;
 });
 </script>
 
 <template>
-    <Head title="Dashboard" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <!-- Header Section -->
+    <Head title="Dashboard"/>
+
+    <AppLayout>
+        <!-- Header -->
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
                 <p class="text-gray-600">Welcome, {{ userFirstName }}</p>
             </div>
             <div class="flex items-center gap-4">
-                <Link href="#" class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
-                    <Plus :size="16" />
-                    Add Patient
+                <Link v-if="canAddPatients" href="/patients/create"
+                    class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
+                <Plus :size="16" /> Add Patient
                 </Link>
-                <Link href="#" class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
-                    <Plus :size="16" />
-                    Add Appointment
+                <Link v-if="canAddAppointments" href="/appointment"
+                    class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
+                <Plus :size="16" /> Add Appointment
                 </Link>
-                <Link href="appointment/select-date-and-time" class="p-2 text-gray-600 hover:text-gray-800">
-                    <Bell :size="20" />
+                <Link href="#" class="p-2 text-gray-600 hover:text-gray-800">
+                <Bell :size="20" />
                 </Link>
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center">
@@ -112,132 +159,143 @@ const userPosition = computed(() => {
             </div>
         </div>
 
-        <!-- Appointment Summary Cards -->
+        <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <!-- Pending Appointments -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Pending Appointments</h3>
-                <div class="text-3xl font-bold text-gray-900 mb-4">{{ dashboardData.appointments.pending }}</div>
-                <Link href="#" class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
-                    See more
-                </Link>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Scheduled</h3>
+                <div class="text-3xl font-bold text-gray-900 mb-4">{{ dashboardData.appointments.scheduled }}</div>
+                <Link :href="appointmentListRoute"
+                    class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
+                See more</Link>
             </div>
-
-            <!-- Completed Appointments -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Completed Appointments</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Completed</h3>
                 <div class="text-3xl font-bold text-gray-900 mb-4">{{ dashboardData.appointments.completed }}</div>
-                <Link href="#" class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
-                    See more
-                </Link>
+                <Link :href="appointmentListRoute"
+                    class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
+                See more</Link>
             </div>
-
-            <!-- Cancelled Appointments -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Cancelled Appointments</h3>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Cancelled</h3>
                 <div class="text-3xl font-bold text-gray-900 mb-4">{{ dashboardData.appointments.cancelled }}</div>
-                <Link href="#" class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
-                    See more
-                </Link>
+                <Link :href="appointmentListRoute"
+                    class="w-full bg-green-800 text-white py-2 rounded-md hover:bg-green-700 transition-colors flex items-center justify-center">
+                See more</Link>
             </div>
         </div>
 
-        <!-- Analytics and Scheduled Appointments Section -->
+        <!-- Analytics & Table -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Analytics Section -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Analytics</h3>
-                    <div class="relative">
-                        <select class="appearance-none bg-gray-100 border border-gray-300 rounded-md px-3 py-1 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                            <option>Appointment Chart</option>
-                        </select>
-                        <ChevronDown :size="16" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <!-- Chart -->
+            <div class="bg-white rounded-lg shadow-md p-6 pb-12">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Analytics</h3>
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="text-md font-medium text-gray-700">Appointments Overview</h4>
+                    <!-- Legend -->
+                    <div class="flex gap-4 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-[#1E4F4F]"></div><span>Completed</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-[#3E7F7B]"></div><span>Cancelled</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 bg-[#9ebebc]"></div><span>Scheduled</span>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="mb-4">
-                    <h4 class="text-md font-medium text-gray-700 mb-3">Appointments Overview</h4>
-                    
-                    <!-- Chart Legend -->
-                    <div class="flex gap-4 mb-4 text-sm">
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-green-500 rounded"></div>
-                            <span>Completed</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-red-500 rounded"></div>
-                            <span>Cancelled</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 bg-blue-500 rounded"></div>
-                            <span>Total</span>
-                        </div>
+                <!-- Chart -->
+                <div v-if="chartData.length > 0" class="relative h-64 flex">
+                    <!-- Y-axis -->
+                    <div class="w-6 flex flex-col justify-between text-sm text-gray-500 relative">
+                        <span>{{ Math.ceil(maxChartValue) }}</span>
+                        <span>{{ Math.ceil(maxChartValue * 0.75) }}</span>
+                        <span>{{ Math.ceil(maxChartValue * 0.5) }}</span>
+                        <span>{{ Math.ceil(maxChartValue * 0.25) }}</span>
+                        <span>0</span>
+                        <div class="absolute top-0 bottom-0 right-0 border-r border-[#3E7F7B]"></div>
                     </div>
 
-                    <!-- Simple Bar Chart -->
-                    <div class="relative h-48 border-l border-b border-gray-300">
-                        <!-- Y-axis labels -->
-                        <div class="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500">
-                            <span>3</span>
-                            <span>2</span>
-                            <span>1</span>
-                            <span>0</span>
+                    <!-- Chart area -->
+                    <div class="flex-1 relative border-b border-[#3E7F7B]">
+                        <!-- Horizontal grid lines -->
+                        <div class="absolute inset-0 flex flex-col justify-between z-0">
+                            <div class="w-full border-t border-[#3E7F7B]/25"></div>
+                            <div class="w-full border-t border-[#3E7F7B]/25"></div>
+                            <div class="w-full border-t border-[#3E7F7B]/25"></div>
+                            <div class="w-full border-t border-[#3E7F7B]/25"></div>
+                            <div class="w-full"></div>
                         </div>
-                        
-                        <!-- Chart bars -->
-                        <div class="ml-8 h-full flex items-end justify-between">
-                            <div v-for="(data, index) in chartData" :key="index" class="flex flex-col items-center gap-1">
-                                <div class="flex gap-1 items-end">
-                                    <div class="w-4 bg-green-500 rounded-t transition-all duration-300" :style="{ height: data.completed > 0 ? `${(data.completed / 3) * 100}%` : '2px' }"></div>
-                                    <div class="w-4 bg-red-500 rounded-t transition-all duration-300" :style="{ height: data.cancelled > 0 ? `${(data.cancelled / 3) * 100}%` : '2px' }"></div>
-                                    <div class="w-4 bg-blue-500 rounded-t transition-all duration-300" :style="{ height: data.total > 0 ? `${(data.total / 3) * 100}%` : '2px' }"></div>
+
+                        <!-- Bars -->
+                        <div class="h-full flex items-end justify-between px-2 relative">
+                            <div v-for="(data, index) in chartData" :key="index"
+                                class="flex flex-col items-center gap-1 h-full relative flex-1">
+
+                                <div class="flex gap-1.5 items-end h-full z-10">
+                                    <!-- Completed -->
+                                    <div class="w-4 bg-[#1E4F4F] relative group"
+                                        :style="{ height: `${Math.max((data.completed / maxChartValue) * 100, 1)}%` }">
+                                        <div class="tooltip hidden group-hover:block">Completed: {{ data.completed }}
+                                        </div>
+                                    </div>
+                                    <!-- Cancelled -->
+                                    <div class="w-4 bg-[#3E7F7B] relative group"
+                                        :style="{ height: `${Math.max((data.cancelled / maxChartValue) * 100, 1)}%` }">
+                                        <div class="tooltip hidden group-hover:block">Cancelled: {{ data.cancelled }}
+                                        </div>
+                                    </div>
+                                    <!-- Scheduled -->
+                                    <div class="w-4 bg-[#9ebebc] relative group"
+                                        :style="{ height: `${Math.max((data.scheduled / maxChartValue) * 100, 1)}%` }">
+                                        <div class="tooltip hidden group-hover:block">Scheduled: {{ data.scheduled }}
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="text-xs text-gray-600">{{ data.date }}</span>
                             </div>
                         </div>
+
+                        <!-- Dates under X-axis -->
+                        <div class="flex justify-between px-2 mt-2">
+                            <span v-for="(data, index) in chartData" :key="index" class="text-sm text-gray-600">
+                                {{ data.date }}
+                            </span>
+                        </div>
                     </div>
-                    
-                    <div class="text-center text-sm text-gray-500 mt-2">Appointments Count</div>
                 </div>
+                <div v-else class="text-center text-gray-500">No appointment data available for the chart.</div>
+
+
             </div>
 
-            <!-- Scheduled Appointments Section -->
+            <!-- Table -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold text-gray-800">Scheduled Appointments</h3>
-                    <p class="text-sm text-gray-600">Appointments</p>
-                </div>
-
-                <!-- Appointments Table -->
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Scheduled Appointments</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
                             <tr class="bg-green-800 text-white">
-                                <th @click="sortAppointments('patientName')" class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700 transition-colors">
-                                    Patient Name
-                                    <ChevronDown :size="12" class="inline ml-1 transition-transform" :class="{ 'rotate-180': sortField === 'patientName' && sortDirection === 'desc' }" />
-                                </th>
-                                <th @click="sortAppointments('date')" class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700 transition-colors">
-                                    Date
-                                    <ChevronDown :size="12" class="inline ml-1 transition-transform" :class="{ 'rotate-180': sortField === 'date' && sortDirection === 'desc' }" />
-                                </th>
-                                <th @click="sortAppointments('startTime')" class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700 transition-colors">
-                                    Start Time
-                                    <ChevronDown :size="12" class="inline ml-1 transition-transform" :class="{ 'rotate-180': sortField === 'startTime' && sortDirection === 'desc' }" />
-                                </th>
-                                <th @click="sortAppointments('branch')" class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700 transition-colors">
-                                    Branch
-                                    <ChevronDown :size="12" class="inline ml-1 transition-transform" :class="{ 'rotate-180': sortField === 'branch' && sortDirection === 'desc' }" />
-                                </th>
+                                <th @click="sortAppointments('patient_name')"
+                                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700">
+                                    Patient Name</th>
+                                <th @click="sortAppointments('schedule_date')"
+                                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700">
+                                    Date</th>
+                                <th @click="sortAppointments('start_time')"
+                                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700">
+                                    Start Time</th>
+                                <th @click="sortAppointments('branch_name')"
+                                    class="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-green-700">
+                                    Branch</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="appointment in sortedAppointments" :key="appointment.patientName" class="border-b border-gray-200 hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.patientName }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.date }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.startTime }}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.branch }}</td>
+                            <tr v-for="appointment in sortedAppointments" :key="appointment.patient_name"
+                                class="border-b border-gray-200 hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.patient_name }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.schedule_date }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.start_time }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900">{{ appointment.branch_name }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -248,7 +306,6 @@ const userPosition = computed(() => {
 </template>
 
 <style scoped>
-/* Custom styles for the dashboard */
 .bg-green-800 {
     background-color: #1e4f4f;
 }
@@ -261,8 +318,17 @@ const userPosition = computed(() => {
     background-color: #2d6a6a;
 }
 
-/* Chart styles */
-.chart-bar {
-    transition: height 0.3s ease;
+.tooltip {
+    position: absolute;
+    top: -2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
 }
 </style>

@@ -17,7 +17,7 @@ interface Dentist {
 interface Treatment {
   treatment_id: string;
   treatment_name: string;
-  treatment_duration: number; // 👈 add duration
+  treatment_duration: number;
 }
 
 const props = defineProps<{
@@ -27,12 +27,12 @@ const props = defineProps<{
 const dentists = ref<Dentist[]>([]);
 const treatments = ref<Treatment[]>([]);
 const errorMessage = ref<string>('');
-const selectedTreatments = ref<Treatment[]>([]); // 👈 track selections
+const selectedTreatments = ref<Treatment[]>([]);
 
 const form = useForm({
   branch_id: props.branch_id || sessionStorage.getItem('selected_branch_id') || '',
   dentist_id: '',
-  treatment_ids: [] as string[], // multiple treatments
+  treatment_ids: [] as string[],
 });
 
 // Fetch dentists + treatments
@@ -71,7 +71,7 @@ const toggleTreatment = (t: Treatment) => {
     if (isValidNextSelection(t)) {
       selectedTreatments.value.push(t);
     } else {
-      errorMessage.value = "Invalid combination. You can pick 2 short (<30), or 1 long (≥30), or 1 long + 1 short.";
+      errorMessage.value = "Invalid combination. You can pick 2 short (≤30 min), or 1 long (>30 min), or 1 long + 1 short.";
       setTimeout(() => (errorMessage.value = ""), 4000);
     }
   }
@@ -81,14 +81,22 @@ const toggleTreatment = (t: Treatment) => {
 // Validation rules
 const isValidNextSelection = (t: Treatment) => {
   const current = [...selectedTreatments.value, t];
-  const longs = current.filter(c => c.treatment_duration >= 30).length;
-  const shorts = current.filter(c => c.treatment_duration < 30).length;
+  const longs = current.filter(c => {
+    const isLong = c.treatment_duration > 30; // Changed from >= 30 to > 30
+    console.log(`Treatment "${c.treatment_name}" duration: ${c.treatment_duration} => ${isLong ? 'long' : 'short'}`);
+    return isLong;
+  }).length;
+  const shorts = current.filter(c => {
+    const isShort = c.treatment_duration <= 30; // Changed from < 30 to <= 30
+    console.log(`Treatment "${c.treatment_name}" duration: ${c.treatment_duration} => ${isShort ? 'short' : 'long'}`);
+    return isShort;
+  }).length;
 
   // valid cases
   return (
-    (longs === 0 && shorts <= 2) ||       // max 2 short
-    (longs === 1 && shorts === 0) ||      // exactly 1 long
-    (longs === 1 && shorts === 1)         // 1 long + 1 short
+    (longs === 0 && shorts <= 2) || // max 2 short
+    (longs === 1 && shorts === 0) || // exactly 1 long
+    (longs === 1 && shorts === 1) // 1 long + 1 short
   );
 };
 
@@ -150,11 +158,10 @@ const submitForm = () => {
             @click="toggleTreatment(t)"
             class="p-4 border rounded-xl cursor-pointer transition shadow-sm hover:shadow-md"
             :class="selectedTreatments.some(sel => sel.treatment_id === t.treatment_id) 
-              ? 'border-[#3E7F7B] bg-[#3E7F7B]/10' 
+              ? 'bg-[#1E4F4F] dark:bg-[#3E7F7B] text-white hover:bg-[#3E7F7B]/50' 
               : 'border-gray-300 dark:border-gray-600'"
           >
-            <div class="font-semibold">{{ t.treatment_name }}</div>
-            <div class="text-sm text-gray-500">{{ t.treatment_duration }} mins</div>
+            <div>{{ t.treatment_name }}</div>
           </div>
         </div>
         <span v-if="form.errors.treatment_ids" class="text-red-500 text-sm">

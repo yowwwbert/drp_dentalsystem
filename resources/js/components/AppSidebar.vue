@@ -1,155 +1,156 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-import { useSidebar } from '@/components/ui/sidebar';
-import { usePage, Link, router } from '@inertiajs/vue3';
-import { Move, LayoutDashboard, Calendar, FileText, Users, Clipboard, BarChart, LogOut, Hospital, ChartBar, UserCircle, UserCog, MapPin, ListOrdered, CircleUserRound } from 'lucide-vue-next';
-import AppLogo from './AppLogo.vue';
-import type { Auth } from '@/types';
+  import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+  import { useSidebar } from '@/components/ui/sidebar';
+  import { usePage, Link, router } from '@inertiajs/vue3';
+  import { Move, LayoutDashboard, Calendar, FileText, Users, Clipboard, BarChart, LogOut, Hospital, ChartBar, UserCog, MapPin, ListOrdered, Settings, UserCircle } from 'lucide-vue-next';
+  import AppLogo from './AppLogo.vue';
+  import type { Auth } from '@/types';
 
-const page = usePage<{ auth: Auth }>();
-const user = computed(() => page.props.auth.user);
-const userType = computed(() => user.value.user_type as string);
 
-interface SidebarMenuItem {
-  name: string;
-  path: string;
-  icon: any;
-  children?: SidebarMenuItem[];
-}
+  const page = usePage<{ auth: Auth }>();
+  const user = computed(() => page.props.auth.user);
+  const userType = computed(() => user.value.user_type as string);
 
-const isCollapsed = ref(false);
-const openMenus = ref<Record<string, boolean>>({});
-const hoveredMenu = ref<string | null>(null);
-const menuRefs = ref<Record<string, HTMLElement | null>>({});
-const sidebarRef = ref<HTMLElement | null>(null);
-const hoverTimeout = ref<any>(null);
-const isMobile = ref(false);
-const isMobileMenuOpen = ref(false);
-
-// Check if mobile on mount and resize
-const checkMobile = () => {
-  isMobile.value = window.innerWidth < 768;
-  if (!isMobile.value) {
-    isMobileMenuOpen.value = false;
+  interface SidebarMenuItem {
+    name: string;
+    path: string;
+    icon: any;
+    children?: SidebarMenuItem[];
   }
-};
 
-const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> => {
-  const basePath = `/dashboard/${userType.toLowerCase()}`;
-  return {
-    Patient: [
-      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-    ],
-    Owner: [
-      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-      { name: 'Patient', path: `/dashboard/owner/records/PatientRecords`, icon: Clipboard },
-      { name: 'Appointments', path: `/dashboard/owner/appointments/AppointmentList`, icon: Calendar },
-      { name: 'Billing', path: `/dashboard/owner/billing/Billing`, icon: FileText },
-      {
-        name: 'Clinic',
-        path: `/dashboard/owner/clinic`,
-        icon: Hospital,
-        children: [
-          { name: 'Dentists', path: `/dashboard/owner/records/DentistRecords`, icon: UserCircle },
-          { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
-          { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
-          { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
-        ],
-      },
-      { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },
-      { name: 'Reports', path: `/dashboard/owner/reports/Reports`, icon: FileText },
-    ],
-    Dentist: [
-      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-      { name: 'Dental Chart', path: `${basePath}/records/dentalChart`, icon: Users },
-    ],
-    Receptionist: [
-      { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-      { name: 'Patient', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
-      { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
-    ],
+  const isCollapsed = ref(false);
+  const openMenus = ref<Record<string, boolean>>({});
+  const hoveredMenu = ref<string | null>(null);
+  const menuRefs = ref<Record<string, HTMLElement | null>>({});
+  const sidebarRef = ref<HTMLElement | null>(null);
+  const hoverTimeout = ref<any>(null);
+  const isMobile = ref(false);
+  const isMobileMenuOpen = ref(false);
+
+  // Check if mobile on mount and resize
+  const checkMobile = () => {
+    isMobile.value = window.innerWidth < 768;
+    if (!isMobile.value) {
+      isMobileMenuOpen.value = false;
+    }
   };
-};
 
-const menuItems = computed<SidebarMenuItem[]>(() => getSidebarMenus(userType.value)[userType.value] || []);
+  const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> => {
+    const basePath = `/dashboard/${userType.toLowerCase()}`;
+    return {
+      Patient: [
+        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
+        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+      ],
+      Owner: [
+        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
+        { name: 'Patient', path: `/dashboard/owner/records/PatientRecords`, icon: Clipboard },
+        { name: 'Appointments', path: `/dashboard/owner/appointments/AppointmentList`, icon: Calendar },
+        { name: 'Billing', path: `/dashboard/owner/billing/Billing`, icon: FileText },
+        {
+          name: 'Clinic',
+          path: `/dashboard/owner/clinic`,
+          icon: Hospital,
+          children: [
+            { name: 'Dentists', path: `/dashboard/owner/records/DentistRecords`, icon: UserCircle },
+            { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
+            { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
+            { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
+          ],
+        },
+        { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },
+        { name: 'Reports', path: `/dashboard/owner/reports/Reports`, icon: FileText },
+      ],
+      Dentist: [
+        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
+        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+        { name: 'Dental Chart', path: `${basePath}/records/dentalChart`, icon: Users },
+      ],
+      Receptionist: [
+        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
+        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+        { name: 'Patient', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
+        { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
+      ],
+    };
+  };
 
-const toggleMenu = (menuName: string) => {
-  openMenus.value[menuName] = !openMenus.value[menuName];
-};
+  const menuItems = computed<SidebarMenuItem[]>(() => getSidebarMenus(userType.value)[userType.value] || []);
 
-const handleLogout = () => {
-  router.post(route('logout'));
-};
+  const toggleMenu = (menuName: string) => {
+    openMenus.value[menuName] = !openMenus.value[menuName];
+  };
 
-const handleMouseEnter = (menuName: string, event: MouseEvent) => {
-  if (hoverTimeout.value) clearTimeout(hoverTimeout.value);
-  if (isCollapsed.value) {
-    hoveredMenu.value = menuName;
-  }
-};
+  const handleLogout = () => {
+    router.post(route('logout'));
+  };
 
-const handleMouseLeave = () => {
-  if (isCollapsed.value) {
-    hoverTimeout.value = setTimeout(() => {
-      hoveredMenu.value = null;
-    }, 250);
-  }
-};
+  const handleMouseEnter = (menuName: string, event: MouseEvent) => {
+    if (hoverTimeout.value) clearTimeout(hoverTimeout.value);
+    if (isCollapsed.value) {
+      hoveredMenu.value = menuName;
+    }
+  };
 
-const clearHoverTimeout = () => {
-  if (hoverTimeout.value) {
-    clearTimeout(hoverTimeout.value);
-  }
-};
+  const handleMouseLeave = () => {
+    if (isCollapsed.value) {
+      hoverTimeout.value = setTimeout(() => {
+        hoveredMenu.value = null;
+      }, 250);
+    }
+  };
 
-const isActive = (path: string, item?: any) => {
-  const currentPath = page.url.split('?')[0].replace(/\/$/, '');
-  const normalizedPath = path.split('?')[0].replace(/\/$/, '');
-  if (item?.name === 'Dashboard') return currentPath === normalizedPath;
-  if (item?.children) {
-    return (
-      currentPath === normalizedPath ||
-      item.children.some((sub: any) => currentPath.includes(sub.path.replace(/\/$/, '')))
-    );
-  }
-  return currentPath.includes(normalizedPath);
-};
+  const clearHoverTimeout = () => {
+    if (hoverTimeout.value) {
+      clearTimeout(hoverTimeout.value);
+    }
+  };
 
-onMounted(() => {
-  // Restore sidebar state from localStorage
-  const savedState = localStorage.getItem('sidebar-collapsed');
-  if (savedState !== null) {
-    isCollapsed.value = JSON.parse(savedState);
-  }
-  
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
-});
+  const isActive = (path: string, item?: any) => {
+    const currentPath = page.url.split('?')[0].replace(/\/$/, '');
+    const normalizedPath = path.split('?')[0].replace(/\/$/, '');
+    if (item?.name === 'Dashboard') return currentPath === normalizedPath;
+    if (item?.children) {
+      return (
+        currentPath === normalizedPath ||
+        item.children.some((sub: any) => currentPath.includes(sub.path.replace(/\/$/, '')))
+      );
+    }
+    return currentPath.includes(normalizedPath);
+  };
 
-// Cleanup event listener
-onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile);
-});
+  onMounted(() => {
+    // Restore sidebar state from localStorage
+    const savedState = localStorage.getItem('sidebar-collapsed');
+    if (savedState !== null) {
+      isCollapsed.value = JSON.parse(savedState);
+    }
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+  });
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
-};
+  // Cleanup event listener
+  onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile);
+  });
 
-const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false;
-};
+  const toggleMobileMenu = () => {
+    isMobileMenuOpen.value = !isMobileMenuOpen.value;
+  };
 
-watch(isCollapsed, (newValue) => {
-  // Save sidebar state to localStorage
-  localStorage.setItem('sidebar-collapsed', JSON.stringify(newValue));
-  // Clear open menus when collapsed
-  if (newValue) {
-    openMenus.value = {};
-  }
-});
+  const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false;
+  };
+
+  watch(isCollapsed, (newValue) => {
+    // Save sidebar state to localStorage
+    localStorage.setItem('sidebar-collapsed', JSON.stringify(newValue));
+    // Clear open menus when collapsed
+    if (newValue) {
+      openMenus.value = {};
+    }
+  });
 </script>
 
 <template>
@@ -236,15 +237,15 @@ watch(isCollapsed, (newValue) => {
     </div>
     <!-- Footer -->
     <div class="p-2 border-t border-darkGreen-800 mt-auto space-y-2">
-      <div class="relative group" @mouseenter="!isMobile && handleMouseEnter('Profile', $event)" @mouseleave="!isMobile && handleMouseLeave">
-        <div ref="el => menuRefs['Profile'] = el" class="flex items-center relative">
-          <Link :href="`/dashboard/${userType.toLowerCase()}/records/UserDetails`" :state="{ personID: user.user_id }" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(`/dashboard/${userType.toLowerCase()}/records/UserDetails`) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-            <span class="mr-3 flex justify-center"><CircleUserRound :size="22" /></span>
-            <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">Profile</span>
+      <div class="relative group" @mouseenter="!isMobile && handleMouseEnter('Settings', $event)" @mouseleave="!isMobile && handleMouseLeave">
+        <div ref="el => menuRefs['Settings'] = el" class="flex items-center relative">
+          <Link :href="`/settings/profile`" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(`/settings/profile`) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
+            <span class="mr-3 flex justify-center"><Settings :size="22" /></span>
+            <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">Settings</span>
           </Link>
-          <!-- Hover Popup for Profile (Desktop only) -->
-          <Link v-if="!isMobile && isCollapsed && hoveredMenu === 'Profile'" :href="`/dashboard/${userType.toLowerCase()}/records/UserDetails`" :state="{ personID: user.user_id }" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
-            Profile
+          <!-- Hover Popup for Settings (Desktop only) -->
+          <Link v-if="!isMobile && isCollapsed && hoveredMenu === 'Settings'" :href="`/settings/profile`" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
+            Settings
           </Link>
         </div>
       </div>
