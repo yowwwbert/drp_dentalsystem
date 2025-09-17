@@ -3,8 +3,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, Link } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
-import { Bell, Plus, ChevronDown } from 'lucide-vue-next';
-import { Link } from '@inertiajs/vue3';
+import { Bell, Plus } from 'lucide-vue-next';
+import axios from 'axios';
 import type { Auth } from '@/types';
 
 // Interfaces
@@ -40,43 +40,29 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
 ];
 
-
-// Dashboard data structure - will be populated from API
-interface AppointmentOverview {
-    date: string;
-    completed: number;
-    cancelled: number;
-    total: number;
-}
-
-interface ScheduledAppointment {
-    patientName: string;
-    date: string;
-    startTime: string;
-    branch: string;
-}
-
-interface DashboardData {
-    appointments: {
-        pending: number;
-        completed: number;
-        cancelled: number;
-        overview: AppointmentOverview[];
-    };
-    scheduledAppointments: ScheduledAppointment[];
-}
-
+// State
 const dashboardData = ref<DashboardData>({
     appointments: {
-        pending: 0,
+        scheduled: 0,
         completed: 0,
         cancelled: 0,
-        overview: []
+        overview: [],
     },
-    scheduledAppointments: []
+    scheduledAppointments: [],
 });
 
-// Chart data for analytics
+// Fetch backend data
+onMounted(async () => {
+    try {
+        const response = await axios.get(route('dashboard.data'));
+        dashboardData.value = response.data;
+        console.log('Dashboard data:', JSON.stringify(dashboardData.value, null, 2));
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+    }
+});
+
+// Chart data
 const chartData = computed(() => dashboardData.value.appointments.overview);
 
 // Max chart value for scaling
@@ -158,8 +144,8 @@ const appointmentListRoute = computed(() => {
                     class="bg-green-800 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors flex items-center gap-2">
                 <Plus :size="16" /> Add Appointment
                 </Link>
-                <Link href="/Appointment" class="p-2 text-gray-600 hover:text-gray-800">
-                    <Bell :size="20" />
+                <Link href="#" class="p-2 text-gray-600 hover:text-gray-800">
+                <Bell :size="20" />
                 </Link>
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center">
