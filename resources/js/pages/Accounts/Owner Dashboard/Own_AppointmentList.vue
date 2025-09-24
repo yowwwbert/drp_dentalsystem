@@ -1,4 +1,3 @@
-
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
@@ -37,11 +36,13 @@ const appointments = ref<Appointment[]>([]);
 onMounted(async () => {
   try {
     const response = await axios.get('/dashboard/appointments', {
-      headers: { 'Cache-Control': 'no-cache' }, // Prevent caching
+      headers: { 'Cache-Control': 'no-cache' },
     });
-    console.log('API Response:', response.data); // Log full response
-    appointments.value = response.data.map((appt: Appointment) => {
-      console.log('Appointment Time:', appt.appointment_id, appt.time); // Log time for each appointment
+    console.log('API Response:', response.data);
+
+    // ✅ FIX: Access response.data.appointments instead of response.data
+    appointments.value = response.data.appointments.map((appt: Appointment) => {
+      console.log('Appointment Time:', appt.appointment_id, appt.time);
       return appt;
     });
   } catch (err: any) {
@@ -66,10 +67,9 @@ const formatDate = (date: string): string => {
 // Format time for display (handle HH:mm:ss)
 const formatTimeForDisplay = (time: string): string => {
   if (!time || time === 'N/A' || !time.match(/^\d{2}:\d{2}:\d{2}$/)) {
-    console.log('Invalid time format:', time); // Debug invalid time
+    console.log('Invalid time format:', time);
     return 'N/A';
   }
-  // Use local timezone instead of UTC
   return new Date(`1970-01-01T${time}`).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -79,7 +79,7 @@ const formatTimeForDisplay = (time: string): string => {
 // Format time for <input type="time"> (e.g., HH:mm from HH:mm:ss)
 const formatTimeForInput = (time: string): string => {
   if (!time || time === 'N/A') return '';
-  return time.slice(0, 5); // Extract HH:mm from HH:mm:ss
+  return time.slice(0, 5);
 };
 
 // Format time for backend (e.g., HH:mm:ss from HH:mm)
@@ -109,28 +109,25 @@ const filteredAppointments = computed(() => {
     );
   }
 
-  // ✅ Sort by date first, then time
+  // Sort by date first, then time
   filtered = filtered.slice().sort((a, b) => {
     const dateA = new Date(a.date).getTime();
     const dateB = new Date(b.date).getTime();
 
     if (dateA !== dateB) {
-      return dateA - dateB; // earliest date first
+      return dateA - dateB;
     }
 
-    // If same date → compare time (HH:mm:ss)
     const [hA, mA, sA] = a.time.split(':').map(Number);
     const [hB, mB, sB] = b.time.split(':').map(Number);
     const timeA = hA * 3600 + mA * 60 + sA;
     const timeB = hB * 3600 + mB * 60 + sB;
 
-    return timeA - timeB; // earliest time first
+    return timeA - timeB;
   });
 
   return filtered;
 });
-
-
 
 const paginatedAppointments = computed(() => {
   const start = (currentPage.value - 1) * rowsPerPage.value;
@@ -153,7 +150,7 @@ const editIndex = ref<number | null>(null);
 function openEditModal(appt: Appointment, idx: number) {
   editAppointment.value = {
     ...JSON.parse(JSON.stringify(appt)),
-    time: formatTimeForInput(appt.time), // Convert HH:mm:ss to HH:mm
+    time: formatTimeForInput(appt.time),
   };
   editIndex.value = idx;
   showEditModal.value = true;
@@ -167,7 +164,7 @@ function saveEdit() {
   if (editAppointment.value !== null && editIndex.value !== null) {
     const payload = {
       ...editAppointment.value,
-      time: formatTimeForBackend(editAppointment.value.time), // Convert HH:mm to HH:mm:ss
+      time: formatTimeForBackend(editAppointment.value.time),
     };
     axios
       .put(`/appointments/${editAppointment.value.appointment_id}`, payload)
@@ -240,7 +237,6 @@ function saveEdit() {
                 <td class="px-4 py-2">{{ formatDate(appt.date) }}</td>
                 <td class="px-4 py-2">{{ formatTimeForDisplay(appt.time) }}</td>
                 <td class="px-4 py-2">{{ appt.branch || 'N/A' }}</td>
-                
                 <td class="px-4 py-2">{{ appt.dentist || 'N/A' }}</td>
                 <td class="px-4 py-2">{{ appt.status || 'N/A' }}</td>
                 <td class="px-4 py-2">

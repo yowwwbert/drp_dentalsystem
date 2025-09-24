@@ -11,8 +11,20 @@ class AppointmentListController extends Controller
 {
     public function index(Request $request)
     {
-        $appointments = Appointment::with(['patient.user', 'dentist.user', 'branch', 'schedule'])
-            ->get()
+        // Initialize the query
+        $query = Appointment::with(['patient.user', 'dentist.user', 'branch', 'schedule']);
+
+        // Apply filters based on query parameters
+        if ($request->has('dentist_id') && !empty($request->query('dentist_id'))) {
+            $query->where('dentist_id', $request->query('dentist_id'));
+        }
+
+        if ($request->has('branch_id') && !empty($request->query('branch_id'))) {
+            $query->where('branch_id', $request->query('branch_id'));
+        }
+
+        // Fetch and map the appointments
+        $appointments = $query->get()
             ->map(function ($appointment) {
                 $appointmentData = [
                     'appointment_id' => $appointment->appointment_id,
@@ -45,6 +57,6 @@ class AppointmentListController extends Controller
                 return $appointmentData;
             });
 
-        return response()->json($appointments);
+        return response()->json(['appointments' => $appointments]);
     }
 }

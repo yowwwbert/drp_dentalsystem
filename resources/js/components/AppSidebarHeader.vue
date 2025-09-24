@@ -15,7 +15,7 @@ withDefaults(defineProps<{
     >
         <div class="flex items-center gap-2">
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
-                <Breadcrumbs :breadcrumbs="breadcrumbs" />
+                <Breadcrumbs :breadcrumbs="breadcrumbs" class="pt-10"/>
             </template>
         </div>
     </header>

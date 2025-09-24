@@ -21,4 +21,18 @@ class Treatment extends Model
         'treatment_cost',
         'is_active',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (empty($model->treatment_id)) {
+                do {
+                    $randomNumber = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+                    $model->treatment_id = 'TREAT-' . $randomNumber;
+                } while (static::where('treatment_id', $model->treatment_id)->exists());
+            }
+        });
+    }
 }
