@@ -36,7 +36,7 @@ const page = usePage<PageProps>()
     <Header />
   
 
-    <div class="duration-750 starting:opacity-0 flex w-full items-center justify-center opacity-100 transition-opacity lg:grow">
+    <div class="duration-750 starting:opacity-0 flex w-full items-center justify-center opacity-100 transition-opacity lg:groxw pt-30">
       <main class="block w-full flex-col-reverse overflow-hidden rounded-lg lg:max-w-7xl lg:flex-row">
         <h1 class="text-[#1E4F4F] font-bold text-5xl">
           Where affordable dentistry, <br />
@@ -47,7 +47,7 @@ const page = usePage<PageProps>()
         </p>
         <Link
           :href="route('appointment')"
-          class="inline-block border-b-2 border-transparent px-5 py-1.5 font-medium rounded-2xl bg-[#1E4F4F] text-white"
+          class="inline-block border-b-2 border-transparent px-5 py-3 font-medium rounded-full bg-[#1E4F4F] text-white"
         >
           Book Appointment
         </Link>

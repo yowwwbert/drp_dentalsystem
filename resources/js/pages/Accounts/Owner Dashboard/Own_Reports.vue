@@ -28,8 +28,8 @@ const endMonth = ref('');
 const endDay = ref('');
 const endYear = ref('');
 
-// Current date (03:41 AM PST, Thursday, September 25, 2025)
-const today = new Date('2025-09-25T03:41:00-07:00');
+// Current date (04:53 PM PST, Friday, September 26, 2025)
+const today = new Date('2025-09-26T16:53:00-07:00');
 const currentYear = today.getFullYear().toString();
 const currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
 const currentDay = today.getDate().toString().padStart(2, '0');
@@ -65,7 +65,7 @@ const years = Array.from({ length: 10 }, (_, i) => {
 });
 
 // Helper function to convert date to words
-const formatDateToWords = (dateStr: string): string => {
+const formatDateToWords = (dateStr: string, periodType: string): string => {
     const date = new Date(dateStr);
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -74,6 +74,9 @@ const formatDateToWords = (dateStr: string): string => {
     const month = monthNames[date.getMonth()];
     const day = date.getDate();
     const year = date.getFullYear();
+    if (periodType === 'monthly') {
+        return `${month} ${year}`;
+    }
     return `${month} ${day}, ${year}`;
 };
 
@@ -148,21 +151,26 @@ const convertDateFormat = (dateString?: string): string => {
     return dateString;
 };
 
-// Get period key for breakdown (month: YYYY-MM, week: YYYY-WW, day: YYYY-MM-DD)
+// Get period key for breakdown (month: YYYY-MM, exact date: YYYY-MM-DD)
 const getPeriodKey = (dateStr: string, periodType: string): string => {
     const date = new Date(dateStr);
     if (periodType === 'monthly') {
         return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-    } else if (periodType === 'weekly') {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const day = date.getDate();
-        const weekStart = new Date(year, month, day - date.getDay() + 1); // Monday start
-        return `${weekStart.getFullYear()}-${(weekStart.getMonth() + 1).toString().padStart(2, '0')}-${weekStart.getDate().toString().padStart(2, '0')}`;
-    } else if (periodType === 'daily') {
-        return dateStr;
     }
-    return '';
+    return dateStr; // Use exact date for daily breakdown
+};
+
+// Generate all months in the date range
+const getAllMonthsInRange = (start: Date, end: Date): string[] => {
+    const months: string[] = [];
+    let current = new Date(start.getFullYear(), start.getMonth(), 1);
+    const endDate = new Date(end.getFullYear(), end.getMonth(), 1);
+
+    while (current <= endDate) {
+        months.push(`${current.getFullYear()}-${(current.getMonth() + 1).toString().padStart(2, '0')}`);
+        current.setMonth(current.getMonth() + 1);
+    }
+    return months;
 };
 
 // Set date range based on selected period
@@ -330,20 +338,21 @@ const reportData = computed(() => {
 const reportBreakdown = computed(() => {
     if (!hasReportData.value) return [];
 
-    let periodType = '';
     const start = new Date(startDate.value);
     const end = new Date(endDate.value);
     const rangeDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24);
-
-    if (selectedPeriod.value === 'Year' || rangeDays > 90) {
-        periodType = 'monthly';
-    } else if (selectedPeriod.value === 'Month' || rangeDays > 7) {
-        periodType = 'weekly';
-    } else {
-        periodType = 'daily';
-    }
+    const periodType = rangeDays > 90 ? 'monthly' : 'daily';
 
     const breakdownMap = new Map<string, { newPatients: number; returningPatients: number; totalPatients: number; completed: number; cancelled: number; totalAppointments: number; }>();
+
+    // Initialize all periods with zeros
+    let periods: string[] = [];
+    if (periodType === 'monthly') {
+        periods = getAllMonthsInRange(start, end);
+        periods.forEach(period => {
+            breakdownMap.set(period, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
+        });
+    }
 
     if (selectedReportType.value === 'Patient Report') {
         patientsData.value.forEach(patient => {
@@ -352,7 +361,7 @@ const reportBreakdown = computed(() => {
 
             const key = getPeriodKey(patientDate, periodType);
 
-            if (!breakdownMap.has(key)) {
+            if (!breakdownMap.has(key) && periodType !== 'monthly') {
                 breakdownMap.set(key, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
             }
 
@@ -376,7 +385,7 @@ const reportBreakdown = computed(() => {
 
             const key = getPeriodKey(dayDate, periodType);
 
-            if (!breakdownMap.has(key)) {
+            if (!breakdownMap.has(key) && periodType !== 'monthly') {
                 breakdownMap.set(key, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
             }
 
@@ -389,7 +398,7 @@ const reportBreakdown = computed(() => {
 
     // Sort keys chronologically
     const sortedKeys = Array.from(breakdownMap.keys()).sort();
-    return sortedKeys.map(key => ({ period: formatDateToWords(key), ...breakdownMap.get(key)! }));
+    return sortedKeys.map(key => ({ period: formatDateToWords(key, periodType), ...breakdownMap.get(key)! }));
 });
 
 const hasValidDates = computed(() => {
@@ -414,12 +423,39 @@ const handleDownloadPDF = () => {
         return;
     }
     const doc = new jsPDF();
-    doc.text(`${selectedReportType.value} (${formatDateToWords(startDate.value)} to ${formatDateToWords(endDate.value)})`, 14, 16);
+    doc.text(`${selectedReportType.value} (${formatDateToWords(startDate.value, 'daily')} to ${formatDateToWords(endDate.value, 'daily')})`, 14, 16);
+    
+    // Summary Table
     autoTable(doc, {
         head: [['Category', 'Total']],
         body: reportData.value.map(row => [row.category, row.total]),
         startY: 22,
+        headStyles: { fillColor: [0, 105, 92], textColor: [255, 255, 255], fontStyle: 'bold' },
+        bodyStyles: { fontSize: 10 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
     });
+
+    // Breakdown Table
+    if (reportBreakdown.value.length > 0) {
+        const head = selectedReportType.value === 'Patient Report'
+            ? [['Period', 'New Patients', 'Returning Patients', 'Total Patients']]
+            : [['Period', 'Completed', 'Cancelled', 'Total']];
+        const body = reportBreakdown.value.map(row => 
+            selectedReportType.value === 'Patient Report'
+                ? [row.period, row.newPatients, row.returningPatients, row.totalPatients]
+                : [row.period, row.completed, row.cancelled, row.totalAppointments]
+        );
+        doc.text('Breakdown', 14, doc.lastAutoTable.finalY + 10);
+        autoTable(doc, {
+            head,
+            body,
+            startY: doc.lastAutoTable.finalY + 16,
+            headStyles: { fillColor: [0, 105, 92], textColor: [255, 255, 255], fontStyle: 'bold' },
+            bodyStyles: { fontSize: 10 },
+            alternateRowStyles: { fillColor: [240, 240, 240] },
+        });
+    }
+
     doc.save(`${selectedReportType.value.toLowerCase().replace(' ', '_')}_${startDate.value}_to_${endDate.value}.pdf`);
 };
 
@@ -428,9 +464,33 @@ const handleDownloadExcel = () => {
         alert('Please select both start and end dates before downloading the report.');
         return;
     }
-    const ws = XLSX.utils.json_to_sheet(reportData.value);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+
+    // Summary Sheet
+    const summaryWs = XLSX.utils.json_to_sheet(reportData.value);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+
+    // Breakdown Sheet
+    if (reportBreakdown.value.length > 0) {
+        const breakdownData = reportBreakdown.value.map(row => 
+            selectedReportType.value === 'Patient Report'
+                ? {
+                      Period: row.period,
+                      'New Patients': row.newPatients,
+                      'Returning Patients': row.returningPatients,
+                      'Total Patients': row.totalPatients
+                  }
+                : {
+                      Period: row.period,
+                      Completed: row.completed,
+                      Cancelled: row.cancelled,
+                      Total: row.totalAppointments
+                  }
+        );
+        const breakdownWs = XLSX.utils.json_to_sheet(breakdownData);
+        XLSX.utils.book_append_sheet(wb, breakdownWs, 'Breakdown');
+    }
+
     XLSX.writeFile(wb, `${selectedReportType.value.toLowerCase().replace(' ', '_')}_${startDate.value}_to_${endDate.value}.xlsx`);
 };
 
@@ -449,11 +509,11 @@ const handleGenerateReport = async () => {
 <template>
     <Head title="Reports" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-4 rounded-xl p-4 bg-gray-50 min-h-screen relative">
+        <div class="flex flex-col gap-6 rounded-xl p-6 bg-gray-50 min-h-screen relative">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="text-3xl font-bold text-gray-900">Reports</h1>
             </div>
-            <form class="space-y-3">
+            <form class="space-y-4">
                 <div class="flex gap-4 mb-2">
                     <div class="flex-1">
                         <label class="font-medium mr-2 text-gray-700">Report Type</label>
@@ -683,49 +743,50 @@ const handleGenerateReport = async () => {
                 </button>
             </form>
             <div v-if="showPreview" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                <div class="bg-white rounded-lg shadow-lg p-6 min-w-[400px] relative">
-                    <h3 class="font-bold mb-4 text-lg">{{ selectedReportType }} ({{ formatDateToWords(startDate) }} to {{ formatDateToWords(endDate) }})</h3>
-                    <div v-if="!hasReportData" class="text-center py-8 text-gray-700">
-                        <p class="text-lg">No reports available</p>
+                <div class="bg-white rounded-lg shadow-lg p-8 min-w-[500px] max-w-4xl relative">
+                    <h3 class="font-bold mb-6 text-xl text-gray-900">{{ selectedReportType }} ({{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }})</h3>
+                    <div v-if="!hasReportData" class="text-center py-10 text-gray-700">
+                        <p class="text-lg font-semibold">No reports available</p>
                         <p class="text-sm mt-2">No data found for the selected date range.</p>
                     </div>
-                    <table v-else class="w-full border-collapse text-sm">
+                    <table v-else class="w-full border-collapse text-sm mb-6">
                         <thead>
-                            <tr class="bg-blue-600 text-white">
-                                <th class="text-left px-4 py-3 font-semibold">Category</th>
-                                <th class="text-left px-4 py-3 font-semibold">Total</th>
+                            <tr class="bg-teal-900 text-white">
+                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Category</th>
+                                <th class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="(row, index) in reportData" :key="row.category" 
                                 :class="index % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
-                                <td class="px-4 py-3 border-b">{{ row.category }}</td>
-                                <td class="px-4 py-3 border-b font-medium">{{ row.total }}</td>
+                                <td class="px-4 py-3 border-b border-gray-200">{{ row.category }}</td>
+                                <td class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.total }}</td>
                             </tr>
                         </tbody>
                     </table>
-                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-4">Breakdown</h4>
-                    <table v-if="reportBreakdown.length > 0" class="w-full border-collapse text-sm mt-2">
+                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-6 mb-3 text-lg text-gray-900">Breakdown</h4>
+                    <table v-if="reportBreakdown.length > 0" class="w-full border-collapse text-sm">
                         <thead>
-                            <tr class="bg-gray-100">
-                                <th class="text-left px-2 py-1">Period</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">New Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">Returning Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">Total Patients</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Completed</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Cancelled</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Total</th>
+                            <tr class="bg-teal-900 text-white">
+                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Period</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">New Patients</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Returning Patients</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Total Patients</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Completed</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Cancelled</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in reportBreakdown" :key="row.period">
-                                <td class="px-2 py-1">{{ row.period }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.newPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.returningPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.totalPatients }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.completed }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.cancelled }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.totalAppointments }}</td>
+                            <tr v-for="(row, index) in reportBreakdown" :key="row.period"
+                                :class="[index % 2 === 0 ? 'bg-gray-50' : 'bg-white', row.period.includes(String(new Date(startDate.value).getFullYear())) ? '' : 'border-t-2 border-gray-300']">
+                                <td class="px-4 py-3 border-b border-gray-200">{{ row.period }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.newPatients }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.returningPatients }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalPatients }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.completed }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.cancelled }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalAppointments }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -737,68 +798,70 @@ const handleGenerateReport = async () => {
                     </button>
                 </div>
             </div>
-            <div v-if="showReport" class="mb-6">
-                <h3 class="font-bold mb-2">{{ selectedReportType }} Report ({{ formatDateToWords(startDate) }} to {{ formatDateToWords(endDate) }})</h3>
-                <div v-if="!hasReportData" class="text-center py-8 text-gray-500 border rounded">
-                    <p class="text-lg">No reports available</p>
+            <div v-if="showReport" class="mb-8">
+                <h3 class="font-bold mb-4 text-xl text-gray-900">{{ selectedReportType }} Report ({{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }})</h3>
+                <div v-if="!hasReportData" class="text-center py-10 text-gray-500 border border-gray-200 rounded-lg">
+                    <p class="text-lg font-semibold">No reports available</p>
                     <p class="text-sm mt-2">No data found for the selected date range.</p>
                 </div>
                 <div v-else>
-                    <table class="w-full border text-sm">
+                    <table class="w-full border-collapse text-sm mb-6">
                         <thead>
-                            <tr class="bg-gray-100">
-                                <th class="text-left px-2 py-1">Category</th>
-                                <th class="text-left px-2 py-1">Total</th>
+                            <tr class="bg-teal-900 text-white">
+                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Category</th>
+                                <th class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in reportData" :key="row.category">
-                                <td class="px-2 py-1">{{ row.category }}</td>
-                                <td class="px-2 py-1">{{ row.total }}</td>
+                            <tr v-for="(row, index) in reportData" :key="row.category" 
+                                :class="index % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
+                                <td class="px-4 py-3 border-b border-gray-200">{{ row.category }}</td>
+                                <td class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.total }}</td>
                             </tr>
                         </tbody>
                     </table>
-                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-4">Breakdown</h4>
-                    <table v-if="reportBreakdown.length > 0" class="w-full border text-sm mt-2">
+                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-6 mb-3 text-lg text-gray-900">Breakdown</h4>
+                    <table v-if="reportBreakdown.length > 0" class="w-full border-collapse text-sm">
                         <thead>
-                            <tr class="bg-gray-100">
-                                <th class="text-left px-2 py-1">Period</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">New Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">Returning Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-left px-2 py-1">Total Patients</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Completed</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Cancelled</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-left px-2 py-1">Total</th>
+                            <tr class="bg-teal-900 text-white">
+                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Period</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">New Patients</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Returning Patients</th>
+                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Total Patients</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Completed</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Cancelled</th>
+                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in reportBreakdown" :key="row.period">
-                                <td class="px-2 py-1">{{ row.period }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.newPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.returningPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-2 py-1">{{ row.totalPatients }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.completed }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.cancelled }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-2 py-1">{{ row.totalAppointments }}</td>
+                            <tr v-for="(row, index) in reportBreakdown" :key="row.period"
+                                :class="[index % 2 === 0 ? 'bg-gray-50' : 'bg-white', row.period.includes(String(new Date(startDate.value).getFullYear())) ? '' : 'border-t-2 border-gray-300']">
+                                <td class="px-4 py-3 border-b border-gray-200">{{ row.period }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.newPatients }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.returningPatients }}</td>
+                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalPatients }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.completed }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.cancelled }}</td>
+                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalAppointments }}</td>
                             </tr>
                         </tbody>
                     </table>
-                    <div class="flex gap-2 mt-4">
+                    <div class="flex gap-3 mt-6">
                         <button 
                             @click="handlePreview" 
-                            class="bg-teal-900 text-white px-4 py-2 rounded hover:bg-teal-700 transition"
+                            class="bg-teal-900 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition"
                         >
                             Preview
                         </button>
                         <button 
                             @click="handleDownloadPDF" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition"
                         >
                             Download as PDF
                         </button>
                         <button 
                             @click="handleDownloadExcel" 
-                            class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-600 transition"
+                            class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
                         >
                             Download as Excel
                         </button>

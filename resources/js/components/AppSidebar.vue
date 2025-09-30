@@ -41,12 +41,18 @@
       Patient: [
         { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
         { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+        { name: 'Dental Chart', path: `${basePath}/dentalChart`, icon: LayoutDashboard},
       ],
       Owner: [
         { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
         { name: 'Patient', path: `/dashboard/owner/records/PatientRecords`, icon: Clipboard },
         { name: 'Appointments', path: `/dashboard/owner/appointments/AppointmentList`, icon: Calendar },
-        { name: 'Billing', path: `/dashboard/owner/billing/Billing`, icon: FileText },
+        { name: 'Billing', path: `/dashboard/owner/billing/Billing`, icon: FileText,
+          children: [
+            { name: 'Billings', path: `/dashboard/owner/billing/Billing`, icon: FileText },
+            { name: 'Payments', path: `/dashboard/owner/billing/Billing/Payment`, icon: BarChart },
+          ]
+        },
         {
           name: 'Clinic',
           path: `/dashboard/owner/clinic`,
@@ -56,6 +62,7 @@
             { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
             { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
             { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
+            { name: 'Payment Methods', path: `/dashboard/owner/clinic/PaymentMethod`, icon: ChartBar },
           ],
         },
         { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },

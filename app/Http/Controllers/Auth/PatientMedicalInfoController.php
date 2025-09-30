@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class PatientMedicalInfoController extends Controller
 {
@@ -62,8 +63,9 @@ class PatientMedicalInfoController extends Controller
             'congenital_abnormalities' => $request->congenital_abnormalities === 'true',
         ]);
 
-        Session::forget('url.intended');
+        Auth::login($userModel);
 
+        Session::forget('url.intended');
         return redirect()->route(
             $userModel && $userModel->email_address ? 'verification.notice' : 'phone.verify'
         )->with([

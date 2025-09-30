@@ -22,53 +22,53 @@ const toggleMobileMenu = () => {
 </script>
 
 <template>
-    <header class="fixed top-0 left-0 right-0 z-50 w-full mb-0 text-sm bg-white/20 backdrop-blur shadow-md">
-        <nav class="flex items-center justify-between gap-4 w-full px-4 sm:px-6 lg:px-8 py-3">
+    <header class="fixed top-0 left-0 right-0 z-50 w-full mb-0 text-sm px-16">
+        <nav class="flex items-center justify-between gap-4 w-full px-4 sm:px-12 lg:px-16 py-3">
             <!-- Logo -->
             <div class="flex-shrink-0 ml-4">
                 <img src="/images/DRP.png" alt="DRP Logo" class="w-32 h-32" />
             </div>
 
             <!-- Desktop Navigation -->
-            <div class="hidden xl:flex items-center justify-between gap-5 ml-auto mr-10">
+            <div class="hidden xl:flex items-center justify-between gap-4 ml-auto mr-10">
                 <Link
                     :href="route('home')"
-                    class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
-                    :class="route().current('home') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
+                    class="inline-block px-6 py-3 text-md font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F]/50 hover:text-white"
+                    :class="route().current('home') ? 'bg-[#1E4F4F] text-white' : 'text-[#163c3c] border-2 border-transparent'"
                 >
                     Home
                 </Link>
                 <Link
                     :href="route('about')"
-                    class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
-                    :class="route().current('about') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
+                    class="inline-block px-6 py-3 text-md font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F]/50 hover:text-white"
+                    :class="route().current('about') ? 'bg-[#1E4F4F] text-white' : 'text-[#163c3c] border-2 border-transparent'"
                 >
                     About Us
                 </Link>
                 <Link
                     :href="route('branches')"
-                    class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
-                    :class="route().current('branches') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
+                    class="inline-block px-6 py-3 text-md font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F]/50 hover:text-white"
+                    :class="route().current('branches') ? 'bg-[#1E4F4F] text-white' : 'text-[#163c3c] border-2 border-transparent'"
                 >
                     Branches
                 </Link>
                 <Link
                     :href="route('services')"
-                    class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
-                    :class="route().current('services') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
+                    class="inline-block px-6 py-3 text-md font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F]/50 hover:text-white"
+                    :class="route().current('services') ? 'bg-[#1E4F4F] text-white' : 'text-[#163c3c] border-2 border-transparent'"
                 >
                     Services
                 </Link>
                 <Link
                     :href="route('contact')"
-                    class="inline-block px-7 py-3 text-lg font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F] hover:text-white"
-                    :class="route().current('contact') ? 'bg-[#1E4F4F] text-white border-2 border-white' : 'text-[#1E4F4F] border-2 border-transparent'"
+                    class="inline-block px-6 py-3 text-md font-medium leading-normal transition-colors duration-300 rounded-full hover:bg-[#1E4F4F]/50 hover:text-white"
+                    :class="route().current('contact') ? 'bg-[#1E4F4F] text-white' : 'text-[#163c3c] border-2 border-transparent'"
                 >
                     Contact Us
                 </Link>
                 <Link
                     :href="route('login')"
-                    class="inline-block rounded-full border border-transparent px-7 py-3 text-lg leading-normal text-white bg-[#1E4F4F] hover:bg-[#163c3c] hover:text-white"
+                    class="inline-block rounded-full border border-transparent px-6 py-3 text-md leading-normal text-white bg-[#1E4F4F] hover:bg-[#163c3c] hover:text-white"
                 >
                     Login
                 </Link>
@@ -112,7 +112,7 @@ const toggleMobileMenu = () => {
             <div class="flex flex-col items-center space-y-4 px-4">
                 <Link
                     :href="route('home')"
-                    class="w-full text-center py-2 text-lg font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
                     :class="route().current('home') ? 'bg-[#1E4F4F] text-white' : ''"
                     @click="toggleMobileMenu"
                 >
@@ -120,7 +120,7 @@ const toggleMobileMenu = () => {
                 </Link>
                 <Link
                     :href="route('about')"
-                    class="w-full text-center py-2 text-lg font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
                     :class="route().current('about') ? 'bg-[#1E4F4F] text-white' : ''"
                     @click="toggleMobileMenu"
                 >
@@ -128,7 +128,7 @@ const toggleMobileMenu = () => {
                 </Link>
                 <Link
                     :href="route('branches')"
-                    class="w-full text-center py-2 text-lg font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
                     :class="route().current('branches') ? 'bg-[#1E4F4F] text-white' : ''"
                     @click="toggleMobileMenu"
                 >
@@ -136,7 +136,7 @@ const toggleMobileMenu = () => {
                 </Link>
                 <Link
                     :href="route('services')"
-                    class="w-full text-center py-2 text-lg font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
                     :class="route().current('services') ? 'bg-[#1E4F4F] text-white' : ''"
                     @click="toggleMobileMenu"
                 >
@@ -144,7 +144,7 @@ const toggleMobileMenu = () => {
                 </Link>
                 <Link
                     :href="route('contact')"
-                    class="w-full text-center py-2 text-lg font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-[#1E4F4F] hover:bg-[#1E4F4F] hover:text-white rounded-full"
                     :class="route().current('contact') ? 'bg-[#1E4F4F] text-white' : ''"
                     @click="toggleMobileMenu"
                 >
@@ -152,13 +152,12 @@ const toggleMobileMenu = () => {
                 </Link>
                 <Link
                     :href="route('login')"
-                    class="w-full text-center py-2 text-lg font-medium text-white bg-[#1E4F4F] hover:bg-[#163c3c] rounded-full"
+                    class="w-full text-center py-2 text-md font-medium text-white bg-[#1E4F4F] hover:bg-[#163c3c] rounded-full"
                     @click="toggleMobileMenu"
                 >
                     Book Appointment
                 </Link>
             </div>
         </div>
-        <div class="w-full h-px bg-gray-300 shadow-sm"></div>
     </header>
 </template>

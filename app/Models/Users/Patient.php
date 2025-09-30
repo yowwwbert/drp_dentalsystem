@@ -26,4 +26,17 @@ class Patient extends Model
     {
         return $this->belongsTo(User::class, 'patient_id', 'user_id');
     }
+    public function appointments()
+    {
+        return $this->hasMany('App\Models\Appointment\Appointment', 'patient_id', 'patient_id');
+    }
+    public function billings()
+    {
+        return $this->hasMany('App\Models\Billing\Billings', 'patient_id
+', 'patient_id');
+    }
+    public function payments()
+    {
+        return $this->hasMany('App\Models\Billing\Payments', 'patient_id', 'patient_id');
+    }
 }

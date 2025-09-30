@@ -56,7 +56,18 @@ class Appointment extends Model
     {
         return $this->belongsTo('App\Models\Users\Patient', 'patient_id', 'patient_id');
     }
-    
+    public function treatments()
+    {
+        return $this->belongsToMany('App\Models\Clinic\Treatment', 'appointment_treatments', 'appointment_id', 'treatment_id');
+    }
+    public function billing()
+    {
+        return $this->belongsTo('App\Models\Billing\Billing', 'billing_id', 'billing_id');
+    }
+        public function payments()
+        {
+            return $this->hasMany('App\Models\Billing\Payments', 'appointment_id', 'appointment_id');
+        }
 
     /**
      * Boot method to generate custom appointment_id when creating a new record

@@ -43,6 +43,7 @@ class AppointmentListController extends Controller
                         ? $appointment->dentist->user->last_name . ', ' . $appointment->dentist->user->first_name 
                         : 'N/A',
                     'status' => $appointment->status ?? 'Scheduled',
+                    'billing_id' => $appointment->billing_id ?? null,
                 ];
 
                 // Log schedule-related data for debugging after formatting
@@ -52,6 +53,7 @@ class AppointmentListController extends Controller
                     'schedule' => $appointment->schedule ? $appointment->schedule->toArray() : null,
                     'start_time' => $appointment->schedule ? ($appointment->schedule->start_time ?? 'null') : 'no schedule',
                     'formatted_time' => $appointmentData['time'],
+                    'billing_id' => $appointmentData['billing_id'],
                 ]);
 
                 return $appointmentData;

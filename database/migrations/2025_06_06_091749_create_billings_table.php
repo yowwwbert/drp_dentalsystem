@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('patient_id', 50)->comment('ID of the patient being billed');
             $table->decimal('amount', 10, 2)->comment('Total amount to be billed');
             $table->date('billing_date')->comment('Date of the billing');
-            $table->integer('discount_amount')->default(0)->comment('Discount amount applied to the billing');
-            $table->string('discount_reason')->nullable()->comment('Reason for the discount applied to the billing');
+            $table->json('discount_amount')->default(0)->comment('Discount amount applied to the billing');
+            $table->json('discount_reason')->nullable()->comment('Reason for the discount applied to the billing');
             $table->enum('status', ['Pending', 'Fully Paid', 'Partially Paid'])->default('Pending')->comment('Status of the billing (Pending, Fully Paid, Partially Paid)');
 
             $table->foreign('patient_id')

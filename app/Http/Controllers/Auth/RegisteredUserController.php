@@ -105,6 +105,8 @@ class RegisteredUserController extends Controller
                 'password'        => Hash::make($request->password),
             ]);
 
+    
+
             event(new Registered($user));
 
             if ($user->user_type === 'Patient') {
@@ -157,7 +159,7 @@ class RegisteredUserController extends Controller
                 ]);
                 Auth::login($user);
             }
-
+            
             return redirect()->route($user->user_type === 'Patient' ? 'medical-information' : 'verification.notice')
                 ->with([
                     'has_email' => !empty($user->email_address),

@@ -148,6 +148,11 @@ class User extends Authenticatable
     return $this->email_address;
 }
 
+    public function billing()
+    {
+        return $this->hasMany(Billings::class, 'patient_id', 'user_id');
+    }
+
 public function sendPhoneVerificationNotification()
     {
         $phone = $this->user_type === 'Patient' && $this->age < 18 && $this->guardian_phone_number

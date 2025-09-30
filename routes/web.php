@@ -31,6 +31,13 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     Route::get('/billing/Billing', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_Billing');
     })->name('owner.billing');
+
+    Route::get('/billing/Billing/Payment', function () {
+        return Inertia::render('Accounts/Owner Dashboard/Own_Payment');
+    })->name('owner.payment');
+    Route::get('/clinic/PaymentMethod', function () {
+        return Inertia::render('Accounts/Owner Dashboard/Own_PaymentMethods');
+    })->name('owner.payment.method');
     
     Route::get('/records/DentistRecords', function () {
         return Inertia::render('Accounts/Owner Dashboard/Own_DentistRecords');
@@ -74,8 +81,11 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
 // Patient Dashboard Routes
 Route::prefix('dashboard/patient')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/appointments/AppointmentList', function () {
-        return Inertia::render('Accounts/Patient Dashboard/P_AppointmentList');
+        return Inertia::render('Accounts/Patient Dashboard/Pat_AppointmentList');
     })->name('patient.appointments');
+    Route::get('/dentalChart', function () {
+        return Inertia::render('Accounts/Patient Dashboard/Pat_DentalChart');
+    })->name('patient.dental.chart');
     
     Route::get('/records/UserDetails', function () {
         return Inertia::render('Accounts/Patient Dashboard/P_UserDetails');

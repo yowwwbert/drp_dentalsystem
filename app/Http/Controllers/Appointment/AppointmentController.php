@@ -19,10 +19,7 @@ class AppointmentController extends Controller
         return Inertia::render('web/Appointment');
     }
 
-    /**
-     * Step 1: Store appointment request temporarily in session.
-     */
-    public function store(Request $request)
+     public function store(Request $request)
     {
         $validated = $request->validate([
             'branch_id'      => 'required|exists:branches,branch_id',
@@ -52,10 +49,7 @@ class AppointmentController extends Controller
         ]);
     }
 
-    /**
-     * Step 2: Confirm and persist appointment in database.
-     */
-    public function confirm(Request $request)
+     public function confirm(Request $request)
     {
         // Must be logged in
         if (!Auth::check()) {
@@ -123,4 +117,137 @@ class AppointmentController extends Controller
                 ->with('error', 'Failed to confirm appointment. Please try again.');
         }
     }
+    /**
+     * Return appointments for logged in patient
+     */
+    public function getAppointments(Request $request)
+    {
+        $appointments = Appointment::with(['dentist', 'branch', 'schedule', 'treatments'])
+            ->where('patient_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($appt) {
+                return [
+                    'appointment_id' => $appt->appointment_id,
+                    'date' => optional($appt->schedule)->date,
+                    'time' => optional($appt->schedule)->time,
+                    'branch' => optional($appt->branch)->name ?? 'N/A',
+                    'dentist' => optional($appt->dentist)->full_name ?? 'N/A',
+                    'services' => $appt->treatments->pluck('name')->toArray(),
+                    'status' => $appt->status,
+                    'notes' => $appt->notes,
+                    'created_at' => $appt->created_at->toDateTimeString(),
+                    'updated_at' => $appt->updated_at->toDateTimeString(),
+                ];
+            });
+
+        return response()->json(['appointments' => $appointments]);
+    }
+
+    /**
+     * Cancel an appointment
+     */
+    public function cancel(Request $request, $appointmentId)
+    {
+        $appointment = Appointment::where('appointment_id', $appointmentId)
+            ->where('patient_id', Auth::id())
+            ->firstOrFail();
+
+        if ($appointment->status !== 'Scheduled') {
+            return response()->json(['message' => 'Only scheduled appointments can be cancelled.'], 400);
+        }
+
+        try {
+            return DB::transaction(function () use ($appointment, $request) {
+                // Update appointment status
+                $appointment->update([
+                    'status' => 'Cancelled',
+                    'status_changed_by' => Auth::id(),
+                    'status_changed_at' => now(),
+                    'reason_for_status_change' => $request->input('reason', 'Cancelled by patient'),
+                ]);
+
+                // Mark the associated schedule as available
+                if ($appointment->schedule) {
+                    $appointment->schedule->update(['is_active' => true]);
+                }
+
+                return response()->json(['message' => 'Appointment cancelled successfully.']);
+            });
+        } catch (\Exception $e) {
+            Log::error('Failed to cancel appointment: ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to cancel appointment. Please try again.'], 500);
+        }
+    }
+
+    /**
+     * Reschedule an appointment
+     */
+    public function reschedule(Request $request, $appointmentId)
+{
+    $validated = $request->validate([
+        'schedule_id' => 'required|exists:schedules,schedule_id',
+        'treatment_ids' => 'required|array|min:1',
+        'treatment_ids.*' => 'exists:treatments,id',
+        'notes' => 'nullable|string',
+        'reason' => 'nullable|string',
+    ]);
+
+    $appointment = Appointment::where('appointment_id', $appointmentId)
+        ->where('patient_id', Auth::id())
+        ->firstOrFail();
+
+    if ($appointment->status !== 'Scheduled') {
+        return response()->json(['message' => 'Only scheduled appointments can be rescheduled.'], 400);
+    }
+
+    $newSchedule = Schedule::where('schedule_id', $validated['schedule_id'])
+        ->where('is_active', true)
+        ->firstOrFail();
+
+    DB::transaction(function () use ($appointment, $newSchedule, $validated) {
+        if ($appointment->schedule) {
+            $appointment->schedule->update(['is_active' => true]);
+        }
+
+        $appointment->update([
+            'schedule_id' => $validated['schedule_id'],
+            'notes' => $validated['notes'],
+            'status_changed_by' => Auth::id(),
+            'status_changed_at' => now(),
+            'reason_for_status_change' => $validated['reason'] ?? 'Rescheduled by patient',
+        ]);
+
+        AppointmentTreatment::where('appointment_id', $appointment->id)->delete();
+        foreach ($validated['treatment_ids'] as $treatmentId) {
+            AppointmentTreatment::create([
+                'appointment_id' => $appointment->id,
+                'treatment_id' => $treatmentId,
+            ]);
+        }
+
+        $newSchedule->update(['is_active' => false]);
+    });
+
+    $updatedAppointment = Appointment::with(['dentist', 'branch', 'schedule', 'treatments'])
+        ->where('appointment_id', $appointmentId)
+        ->first();
+
+    return response()->json([
+        'message' => 'Appointment rescheduled successfully.',
+        'appointment' => [
+            'appointment_id' => $updatedAppointment->appointment_id,
+            'date' => optional($updatedAppointment->schedule)->date,
+            'time' => optional($updatedAppointment->schedule)->time,
+            'branch' => optional($updatedAppointment->branch)->name ?? 'N/A',
+            'dentist' => optional($updatedAppointment->dentist)->full_name ?? 'N/A',
+            'services' => $updatedAppointment->treatments->pluck('name')->toArray(),
+            'status' => $updatedAppointment->status,
+            'notes' => $updatedAppointment->notes,
+            'created_at' => $updatedAppointment->created_at->toDateTimeString(),
+            'updated_at' => $updatedAppointment->updated_at->toDateTimeString(),
+        ]
+    ]);
+}
+
 }
