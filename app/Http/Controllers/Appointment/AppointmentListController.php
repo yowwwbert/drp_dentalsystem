@@ -19,6 +19,10 @@ class AppointmentListController extends Controller
             $query->where('dentist_id', $request->query('dentist_id'));
         }
 
+        if ($request->has('patient_id') && !empty($request->query('patient_id'))) {
+            $query->where('patient_id', $request->query('patient_id'));
+        }
+
         if ($request->has('branch_id') && !empty($request->query('branch_id'))) {
             $query->where('branch_id', $request->query('branch_id'));
         }

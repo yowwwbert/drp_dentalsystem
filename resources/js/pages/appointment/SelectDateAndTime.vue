@@ -16,13 +16,18 @@ interface Schedule {
   start_time: string;
   end_time: string;
   schedule_id: string | number;
-  treatment_ids?: string[]; 
+  treatment_ids?: string[];
+  branch_name?: string;
+  dentist_name?: string;
 }
 
 const props = defineProps<{
   branch_id?: string | null;
   dentist_id?: string | null;
   treatment_ids?: string[] | null;
+  treatment_names?: string[] | null; // Added to receive treatment_names
+  branch_name?: string | null;
+  dentist_name?: string | null;
 }>();
 
 const schedules = ref<Schedule[]>([]);
@@ -30,9 +35,24 @@ const errorMessage = ref<string>('');
 const form = useForm({
   branch_id: props.branch_id || sessionStorage.getItem('selected_branch_id') || '',
   dentist_id: props.dentist_id || sessionStorage.getItem('selected_dentist_id') || '',
+  branch_name: props.branch_name || sessionStorage.getItem('selected_branch_name') || '',
+  dentist_name: props.dentist_name || sessionStorage.getItem('selected_dentist_name') || '',
   schedule_id: '',
   treatment_ids: props.treatment_ids || JSON.parse(sessionStorage.getItem('selected_treatment_ids') || '[]'),
+  treatment_names: props.treatment_names || JSON.parse(sessionStorage.getItem('selected_treatment_names') || '[]'), // Added treatment_names
 });
+
+// Debug: Log initial props, session storage, and form
+console.log('Initial props:', props);
+console.log('Initial session storage:', {
+  selected_branch_id: sessionStorage.getItem('selected_branch_id'),
+  selected_branch_name: sessionStorage.getItem('selected_branch_name'),
+  selected_dentist_id: sessionStorage.getItem('selected_dentist_id'),
+  selected_dentist_name: sessionStorage.getItem('selected_dentist_name'),
+  selected_treatment_ids: sessionStorage.getItem('selected_treatment_ids'),
+  selected_treatment_names: sessionStorage.getItem('selected_treatment_names'), // Added
+});
+console.log('Initial form:', form);
 
 const selectedDate = ref<string>('');
 
@@ -66,14 +86,26 @@ onMounted(async () => {
     return;
   }
 
+  // Ensure branch_name, dentist_name, and treatment_names are set from session if not in props
+  if (!form.branch_name && sessionStorage.getItem('selected_branch_name')) {
+    form.branch_name = sessionStorage.getItem('selected_branch_name') || '';
+  }
+  if (!form.dentist_name && sessionStorage.getItem('selected_dentist_name')) {
+    form.dentist_name = sessionStorage.getItem('selected_dentist_name') || '';
+  }
+  if (!form.treatment_names.length && sessionStorage.getItem('selected_treatment_names')) {
+    form.treatment_names = JSON.parse(sessionStorage.getItem('selected_treatment_names') || '[]');
+  }
+
+  console.log('Form after session storage check:', form);
+
   try {
     const response = await axios.get(route('appointment.dentist.schedule', {
       branch_id: form.branch_id,
       dentist_id: form.dentist_id,
-    }), {
-      params: { dentist_id: form.dentist_id }
-    });
+    }));
     schedules.value = response.data || [];
+    console.log('Fetched schedules:', schedules.value);
     if (!schedules.value.length) {
       errorMessage.value = 'No schedules available for this dentist at the selected branch.';
     } else {
@@ -82,8 +114,11 @@ onMounted(async () => {
       }
     }
   } catch (error) {
+    console.error('Error fetching schedules:', error);
     errorMessage.value = 'Failed to load schedules. Please try again.';
   }
+
+  console.log('Form after fetching schedules:', form);
 });
 
 const submitForm = () => {
@@ -92,6 +127,22 @@ const submitForm = () => {
     return;
   }
   console.log('Submitting form with data:', form);
+  // Store branch_name, dentist_name, and treatment_names in session for consistency
+  if (form.branch_name) {
+    sessionStorage.setItem('selected_branch_name', form.branch_name);
+  }
+  if (form.dentist_name) {
+    sessionStorage.setItem('selected_dentist_name', form.dentist_name);
+  }
+  if (form.treatment_names.length) {
+    sessionStorage.setItem('selected_treatment_names', JSON.stringify(form.treatment_names)); // Added
+  }
+  console.log('Session storage after update:', {
+    selected_branch_name: sessionStorage.getItem('selected_branch_name'),
+    selected_dentist_name: sessionStorage.getItem('selected_dentist_name'),
+    selected_treatment_names: sessionStorage.getItem('selected_treatment_names'), // Added
+  });
+
   form.post(route('appointment.store'), {
     preserveState: true,
     preserveScroll: true,

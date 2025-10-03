@@ -1,275 +1,322 @@
 <script setup lang="ts">
-  import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
-  import { useSidebar } from '@/components/ui/sidebar';
-  import { usePage, Link, router } from '@inertiajs/vue3';
-  import { Move, LayoutDashboard, Calendar, FileText, Users, Clipboard, BarChart, LogOut, Hospital, ChartBar, UserCog, MapPin, ListOrdered, Settings, UserCircle } from 'lucide-vue-next';
-  import AppLogo from './AppLogo.vue';
-  import type { Auth } from '@/types';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { usePage, Link, router } from '@inertiajs/vue3';
+import * as Icons from 'lucide-vue-next';
+import AppLogo from './AppLogo.vue';
+import type { Auth } from '@/types';
 
+const { LayoutDashboard, Calendar, Clipboard, FileText, BarChart, Hospital, UserCircle, UserCog, MapPin, ListOrdered, ChartBar, Settings, LogOut, Menu, ChevronRight } = Icons;
 
-  const page = usePage<{ auth: Auth }>();
-  const user = computed(() => page.props.auth.user);
-  const userType = computed(() => user.value.user_type as string);
+const page = usePage<{ auth: Auth }>();
+const user = computed(() => page.props.auth.user);
+const userType = computed(() => user.value.user_type as string);
 
-  interface SidebarMenuItem {
-    name: string;
-    path: string;
-    icon: any;
-    children?: SidebarMenuItem[];
+interface SidebarMenuItem {
+  name: string;
+  path: string;
+  icon: any;
+  children?: SidebarMenuItem[];
+}
+
+const isCollapsed = ref(false);
+const openMenus = ref<Record<string, boolean>>({});
+const isMobile = ref(false);
+const isMobileMenuOpen = ref(false);
+
+const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> => {
+  const basePath = `/dashboard/${userType.toLowerCase()}`;
+  return {
+    Patient: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+      { name: 'Dental Chart', path: `${basePath}/dentalChart`, icon: Clipboard },
+      {
+        name: 'Billing',
+        path: `/dashboard/patient/billing`,
+        icon: FileText,
+        children: [
+          { name: 'Billings', path: `/dashboard/patient/billing`, icon: FileText },
+          { name: 'Payments', path: `/dashboard/patient/billing/payment`, icon: BarChart },
+        ],
+      },
+    ],
+    Owner: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Patients', path: `/dashboard/owner/records/PatientRecords`, icon: Clipboard },
+      { name: 'Appointments', path: `/dashboard/owner/appointments/AppointmentList`, icon: Calendar },
+      {
+        name: 'Billing',
+        path: `/dashboard/owner/billing`,
+        icon: FileText,
+        children: [
+          { name: 'Billings', path: `/dashboard/owner/billing`, icon: FileText },
+          { name: 'Payments', path: `/dashboard/owner/billing/payment`, icon: BarChart },
+        ],
+      },
+      {
+        name: 'Clinic',
+        path: `/dashboard/owner/clinic`,
+        icon: Hospital,
+        children: [
+          { name: 'Dentists', path: `/dashboard/owner/records/DentistRecords`, icon: UserCircle },
+          { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
+          { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
+          { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
+          { name: 'Payment Methods', path: `/dashboard/owner/clinic/PaymentMethod`, icon: ChartBar },
+          { name: 'Tooth Marks', path: `/dashboard/owner/clinic/ToothMarks`, icon: Clipboard },
+        ],
+      },
+      { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },
+      { name: 'Reports', path: `/dashboard/owner/reports`, icon: FileText },
+    ],
+    Dentist: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+      { name: 'Dental Chart', path: `${basePath}/records/dentalChart`, icon: Clipboard },
+    ],
+    Receptionist: [
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
+      { name: 'Patients', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
+      { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
+    ],
+  };
+};
+
+const menuItems = computed<SidebarMenuItem[]>(() => getSidebarMenus(userType.value)[userType.value] || []);
+
+const toggleMenu = (menuName: string) => {
+  openMenus.value[menuName] = !openMenus.value[menuName];
+};
+
+const handleLogout = () => {
+  router.post(route('logout'));
+};
+
+const isActive = (path: string, item?: SidebarMenuItem) => {
+  const currentPath = page.url.split('?')[0].replace(/\/$/, '');
+  const normalizedPath = path.split('?')[0].replace(/\/$/, '');
+  if (item?.name === 'Dashboard') return currentPath === normalizedPath;
+  if (item?.children) {
+    return (
+      currentPath === normalizedPath ||
+      item.children.some((sub) => currentPath.includes(sub.path.replace(/\/$/, '')))
+    );
   }
+  return currentPath.includes(normalizedPath);
+};
 
-  const isCollapsed = ref(false);
-  const openMenus = ref<Record<string, boolean>>({});
-  const hoveredMenu = ref<string | null>(null);
-  const menuRefs = ref<Record<string, HTMLElement | null>>({});
-  const sidebarRef = ref<HTMLElement | null>(null);
-  const hoverTimeout = ref<any>(null);
-  const isMobile = ref(false);
-  const isMobileMenuOpen = ref(false);
-
-  // Check if mobile on mount and resize
-  const checkMobile = () => {
-    isMobile.value = window.innerWidth < 768;
-    if (!isMobile.value) {
-      isMobileMenuOpen.value = false;
+// Keep dropdown open if a subitem is active
+watch(page.url, () => {
+  menuItems.value.forEach((item) => {
+    if (item.children && isActive(item.path, item)) {
+      openMenus.value[item.name] = true;
     }
-  };
-
-  const getSidebarMenus = (userType: string): Record<string, SidebarMenuItem[]> => {
-    const basePath = `/dashboard/${userType.toLowerCase()}`;
-    return {
-      Patient: [
-        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-        { name: 'Dental Chart', path: `${basePath}/dentalChart`, icon: LayoutDashboard},
-      ],
-      Owner: [
-        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-        { name: 'Patient', path: `/dashboard/owner/records/PatientRecords`, icon: Clipboard },
-        { name: 'Appointments', path: `/dashboard/owner/appointments/AppointmentList`, icon: Calendar },
-        { name: 'Billing', path: `/dashboard/owner/billing/Billing`, icon: FileText,
-          children: [
-            { name: 'Billings', path: `/dashboard/owner/billing/Billing`, icon: FileText },
-            { name: 'Payments', path: `/dashboard/owner/billing/Billing/Payment`, icon: BarChart },
-          ]
-        },
-        {
-          name: 'Clinic',
-          path: `/dashboard/owner/clinic`,
-          icon: Hospital,
-          children: [
-            { name: 'Dentists', path: `/dashboard/owner/records/DentistRecords`, icon: UserCircle },
-            { name: 'Staff', path: `/dashboard/owner/records/StaffRecords`, icon: UserCog },
-            { name: 'Branches', path: `/dashboard/owner/clinic/BranchSettings`, icon: MapPin },
-            { name: 'Services', path: `/dashboard/owner/clinic/ServicesList`, icon: ListOrdered },
-            { name: 'Payment Methods', path: `/dashboard/owner/clinic/PaymentMethod`, icon: ChartBar },
-          ],
-        },
-        { name: 'Data', path: `/dashboard/owner/data/Data`, icon: ChartBar },
-        { name: 'Reports', path: `/dashboard/owner/reports/Reports`, icon: FileText },
-      ],
-      Dentist: [
-        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-        { name: 'Dental Chart', path: `${basePath}/records/dentalChart`, icon: Users },
-      ],
-      Receptionist: [
-        { name: 'Dashboard', path: `/dashboard`, icon: LayoutDashboard },
-        { name: 'Appointments', path: `${basePath}/appointments/AppointmentList`, icon: Calendar },
-        { name: 'Patient', path: `${basePath}/records/PatientRecords`, icon: Clipboard },
-        { name: 'Billing', path: `${basePath}/billing/Billing`, icon: FileText },
-      ],
-    };
-  };
-
-  const menuItems = computed<SidebarMenuItem[]>(() => getSidebarMenus(userType.value)[userType.value] || []);
-
-  const toggleMenu = (menuName: string) => {
-    openMenus.value[menuName] = !openMenus.value[menuName];
-  };
-
-  const handleLogout = () => {
-    router.post(route('logout'));
-  };
-
-  const handleMouseEnter = (menuName: string, event: MouseEvent) => {
-    if (hoverTimeout.value) clearTimeout(hoverTimeout.value);
-    if (isCollapsed.value) {
-      hoveredMenu.value = menuName;
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (isCollapsed.value) {
-      hoverTimeout.value = setTimeout(() => {
-        hoveredMenu.value = null;
-      }, 250);
-    }
-  };
-
-  const clearHoverTimeout = () => {
-    if (hoverTimeout.value) {
-      clearTimeout(hoverTimeout.value);
-    }
-  };
-
-  const isActive = (path: string, item?: any) => {
-    const currentPath = page.url.split('?')[0].replace(/\/$/, '');
-    const normalizedPath = path.split('?')[0].replace(/\/$/, '');
-    if (item?.name === 'Dashboard') return currentPath === normalizedPath;
-    if (item?.children) {
-      return (
-        currentPath === normalizedPath ||
-        item.children.some((sub: any) => currentPath.includes(sub.path.replace(/\/$/, '')))
-      );
-    }
-    return currentPath.includes(normalizedPath);
-  };
-
-  onMounted(() => {
-    // Restore sidebar state from localStorage
-    const savedState = localStorage.getItem('sidebar-collapsed');
-    if (savedState !== null) {
-      isCollapsed.value = JSON.parse(savedState);
-    }
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
   });
+});
 
-  // Cleanup event listener
-  onUnmounted(() => {
-    window.removeEventListener('resize', checkMobile);
-  });
-
-  const toggleMobileMenu = () => {
-    isMobileMenuOpen.value = !isMobileMenuOpen.value;
-  };
-
-  const closeMobileMenu = () => {
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768;
+  if (!isMobile.value) {
     isMobileMenuOpen.value = false;
-  };
+  }
+};
 
-  watch(isCollapsed, (newValue) => {
-    // Save sidebar state to localStorage
-    localStorage.setItem('sidebar-collapsed', JSON.stringify(newValue));
-    // Clear open menus when collapsed
-    if (newValue) {
-      openMenus.value = {};
+onMounted(() => {
+  const savedState = localStorage.getItem('sidebar-collapsed');
+  if (savedState !== null) {
+    isCollapsed.value = JSON.parse(savedState);
+  }
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  // Initialize open menus for active subitems
+  menuItems.value.forEach((item) => {
+    if (item.children && isActive(item.path, item)) {
+      openMenus.value[item.name] = true;
     }
   });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile);
+});
+
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value;
+};
+
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false;
+};
+
+watch(isCollapsed, (newValue) => {
+  localStorage.setItem('sidebar-collapsed', JSON.stringify(newValue));
+  if (newValue) {
+    openMenus.value = {};
+    // Re-open menus for active subitems when collapsing
+    menuItems.value.forEach((item) => {
+      if (item.children && isActive(item.path, item)) {
+        openMenus.value[item.name] = true;
+      }
+    });
+  }
+});
 </script>
 
 <template>
   <!-- Mobile Menu Toggle -->
   <div v-if="isMobile" class="md:hidden fixed top-4 left-4 z-50">
-    <button @click="toggleMobileMenu" class="p-2 bg-darkGreen-900 text-white rounded-md shadow-lg">
-      <Move :size="20" />
+    <button
+      @click="toggleMobileMenu"
+      class="p-3 bg-darkGreen-900 text-white rounded-md shadow-lg"
+    >
+      <Menu :size="24" />
     </button>
   </div>
 
   <!-- Mobile Overlay -->
-  <div v-if="isMobile && isMobileMenuOpen" @click="closeMobileMenu" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>
+  <div
+    v-if="isMobile && isMobileMenuOpen"
+    @click="closeMobileMenu"
+    class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+  ></div>
 
   <!-- Sidebar -->
-  <div ref="sidebarRef" :class="[
-    'h-screen bg-darkGreen-900 text-white flex flex-col relative transition-all duration-300 ease-in-out',
-    isMobile ? (isMobileMenuOpen ? 'w-64 fixed left-0 top-0 z-[1050]' : 'w-0 -left-64') : (isCollapsed ? 'w-16 z-[1050]' : 'w-64 z-[1050]')
-  ]" style="overflow: visible;">
-    <!-- Logo + Toggle -->
-    <div class="p-4 border-b border-darkGreen-800 flex flex-col items-center h-32">
-      <img src="/images/DRP.png" alt="Logo" :class="['transition-all', isCollapsed && !isMobile ? 'w-10 h-10' : 'w-12 h-12']" />
-      <button v-if="!isMobile" @click="isCollapsed = !isCollapsed" class="mt-3 p-1 bg-hoverGreen-700 rounded-full hover:bg-darkGreen-800">
-        <Move :size="20" :class="isCollapsed ? 'rotate-45' : ''" />
+  <aside
+    :class="[
+      'h-screen bg-darkGreen-900 text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg',
+      isMobile ? (isMobileMenuOpen ? 'w-72 fixed left-0 top-0 z-[1050]' : 'w-0 -left-72') : (isCollapsed ? 'w-20' : 'w-72')
+    ]"
+  >
+    <!-- Header -->
+    <div class="py-6 px-6 border-b border-darkGreen-700 flex items-center justify-between h-20">
+      <img
+        src="/images/DRP.png"
+        alt="Logo"
+        :class="['transition-all', isCollapsed && !isMobile ? 'w-12 h-12' : 'w-16 h-16']"
+      />
+      <button
+        v-if="!isMobile"
+        @click="isCollapsed = !isCollapsed"
+        class="p-2 bg-darkGreen-800 rounded-full hover:bg-darkGreen-700 relative -mr-2"
+      >
+        <ChevronRight
+          :size="24"
+          :class="['transition-transform', isCollapsed ? 'rotate-180' : '']"
+        />
       </button>
     </div>
+
     <!-- Navigation -->
-    <div class="flex-1 p-2 mt-4 space-y-2">
+    <nav class="flex-1 py-6 px-4 space-y-4 overflow-y-auto">
       <template v-for="item in menuItems" :key="item.name">
-        <div class="relative group" @mouseenter="!isMobile && handleMouseEnter(item.name, $event)" @mouseleave="!isMobile && handleMouseLeave">
+        <div class="relative">
           <template v-if="item.children">
-            <!-- Parent menu item with dropdown -->
-            <button @click="toggleMenu(item.name)" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-              <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
-              <div :class="['flex-1 transition-all duration-300', (isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto']">
-                <div class="flex justify-between items-center">
-                  <span>{{ item.name }}</span>
-                  <span v-if="!isCollapsed || isMobile" :class="['transition-transform duration-200', openMenus[item.name] ? 'rotate-180' : '']">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="6,9 12,15 18,9"></polyline>
-                    </svg>
-                  </span>
-                </div>
-              </div>
+            <!-- Parent Menu Item -->
+            <button
+              @click="toggleMenu(item.name)"
+              :class="[
+                'flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold transition-colors',
+                isActive(item.path, item) ? 'bg-darkGreen-600 text-white shadow-md' : 'hover:bg-darkGreen-700'
+              ]"
+            >
+              <component :is="item.icon" :size="24" class="mr-4" />
+              <span
+                :class="[
+                  'flex-1 text-left',
+                  isCollapsed && !isMobile ? 'hidden' : 'block'
+                ]"
+              >
+                {{ item.name }}
+              </span>
+              <ChevronRight
+                v-if="!isCollapsed || isMobile"
+                :size="18"
+                :class="['transition-transform', openMenus[item.name] ? 'rotate-90' : '']"
+              />
             </button>
-            
-            <!-- Dropdown sub-items -->
-            <transition name="dropdown" appear>
-              <div v-if="(!isCollapsed || isMobile) && openMenus[item.name]" class="space-y-1">
-                <template v-for="sub in item.children" :key="sub.path">
-                  <Link :href="sub.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-                    <span class="mr-3 flex justify-center"><component :is="sub.icon" :size="18" /></span>
-                    <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">{{ sub.name }}</span>
-                  </Link>
-                </template>
+
+            <!-- Submenu -->
+            <transition
+              enter-active-class="transition-all duration-200 ease-out"
+              leave-active-class="transition-all duration-200 ease-in"
+              enter-from-class="opacity-0 max-h-0"
+              enter-to-class="opacity-100 max-h-[500px]"
+              leave-from-class="opacity-100 max-h-[500px]"
+              leave-to-class="opacity-0 max-h-0"
+            >
+              <div
+                v-if="(!isCollapsed || isMobile) && openMenus[item.name]"
+                class="ml-6 mt-3 space-y-2 border-l-2 border-darkGreen-700 pl-4"
+              >
+                <Link
+                  v-for="sub in item.children"
+                  :key="sub.path"
+                  :href="sub.path"
+                  @click="isMobile && closeMobileMenu()"
+                  :class="[
+                    'flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+                    isActive(sub.path) ? 'bg-darkGreen-500 text-white shadow-md' : 'hover:bg-darkGreen-700'
+                  ]"
+                >
+                  <component :is="sub.icon" :size="20" class="mr-3" />
+                  <span
+                    :class="[isCollapsed && !isMobile ? 'hidden' : 'block']"
+                  >
+                    {{ sub.name }}
+                  </span>
+                </Link>
               </div>
             </transition>
-            
-            <!-- Hover Popup for Submenu (Desktop only) -->
-            <div v-if="!isMobile && isCollapsed && hoveredMenu === item.name" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2" @mouseenter="clearHoverTimeout" @mouseleave="handleMouseLeave">
-              <div class="text-white font-semibold px-2 pb-1">{{ item.name }}</div>
-              <div class="mt-1 space-y-1">
-                <template v-for="sub in item.children" :key="sub.path">
-                  <Link :href="sub.path" :class="['flex items-center gap-2 px-3 py-1.5 rounded-md text-sm', isActive(sub.path) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-                    <span><component :is="sub.icon" :size="20" /></span>
-                    <span>{{ sub.name }}</span>
-                  </Link>
-                </template>
-              </div>
-            </div>
           </template>
           <template v-else>
-            <!-- Regular menu item -->
-            <Link :href="item.path" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(item.path, item) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-              <span class="mr-3 flex justify-center"><component :is="item.icon" :size="22" /></span>
-              <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">{{ item.name }}</span>
-            </Link>
-            <!-- Hover Popup for Regular Menu Item (Desktop only) -->
-            <Link v-if="!isMobile && isCollapsed && hoveredMenu === item.name" :href="item.path" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
-              {{ item.name }}
+            <!-- Regular Menu Item -->
+            <Link
+              :href="item.path"
+              @click="isMobile && closeMobileMenu()"
+              :class="[
+                'flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold transition-colors',
+                isActive(item.path, item) ? 'bg-darkGreen-600 text-white shadow-md' : 'hover:bg-darkGreen-700'
+              ]"
+            >
+              <component :is="item.icon" :size="24" class="mr-4" />
+              <span
+                :class="[isCollapsed && !isMobile ? 'hidden' : 'block']"
+              >
+                {{ item.name }}
+              </span>
             </Link>
           </template>
         </div>
       </template>
-    </div>
+    </nav>
+
     <!-- Footer -->
-    <div class="p-2 border-t border-darkGreen-800 mt-auto space-y-2">
-      <div class="relative group" @mouseenter="!isMobile && handleMouseEnter('Settings', $event)" @mouseleave="!isMobile && handleMouseLeave">
-        <div ref="el => menuRefs['Settings'] = el" class="flex items-center relative">
-          <Link :href="`/settings/profile`" @click="isMobile && closeMobileMenu()" :class="['flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors', isActive(`/settings/profile`) ? 'bg-hoverGreen-700' : 'hover:bg-hoverGreen-700']">
-            <span class="mr-3 flex justify-center"><Settings :size="22" /></span>
-            <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">Settings</span>
-          </Link>
-          <!-- Hover Popup for Settings (Desktop only) -->
-          <Link v-if="!isMobile && isCollapsed && hoveredMenu === 'Settings'" :href="`/settings/profile`" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white">
-            Settings
-          </Link>
-        </div>
-      </div>
-      <div class="relative group" @mouseenter="!isMobile && handleMouseEnter('Logout', $event)" @mouseleave="!isMobile && handleMouseLeave">
-        <div ref="el => menuRefs['Logout'] = el" class="flex items-center relative">
-          <button @click="handleLogout" class="flex items-center w-full px-3 py-2 rounded-md text-sm font-medium hover:bg-hoverGreen-700">
-            <span class="mr-3 flex justify-center"><LogOut :size="22" /></span>
-            <span :class="[(isCollapsed && !isMobile) ? 'opacity-0 w-0' : 'opacity-100 w-auto', 'transition-all']">Logout</span>
-          </button>
-          <!-- Hover Popup for Logout (Desktop only) -->
-          <button v-if="!isMobile && isCollapsed && hoveredMenu === 'Logout'" @click="handleLogout" class="absolute left-full top-0 z-[1000] w-48 bg-darkGreen-900 border border-darkGreen-700 rounded-r-md shadow-lg p-2 text-sm text-white text-left">
-            Logout
-          </button>
-        </div>
-      </div>
+    <div class="px-4 py-6 border-t border-darkGreen-700 space-y-4">
+      <Link
+        :href="`/settings/profile`"
+        @click="isMobile && closeMobileMenu()"
+        :class="[
+          'flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold transition-colors',
+          isActive(`/settings/profile`) ? 'bg-darkGreen-600 text-white shadow-md' : 'hover:bg-darkGreen-700'
+        ]"
+      >
+        <Settings :size="24" class="mr-4" />
+        <span :class="[isCollapsed && !isMobile ? 'hidden' : 'block']">
+          Settings
+        </span>
+      </Link>
+      <button
+        @click="handleLogout"
+        class="flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold transition-colors hover:bg-darkGreen-700"
+      >
+        <LogOut :size="24" class="mr-4" />
+        <span :class="[isCollapsed && !isMobile ? 'hidden' : 'block']">
+          Logout
+        </span>
+      </button>
     </div>
-  </div>
+  </aside>
 </template>
 
 <style scoped>
@@ -281,36 +328,24 @@
   background-color: #1a4545;
 }
 
-.bg-hoverGreen-700 {
+.bg-darkGreen-700 {
   background-color: #2d6a6a;
+}
+
+.bg-darkGreen-600 {
+  background-color: #3a8585;
+}
+
+.bg-darkGreen-500 {
+  background-color: #4a9f9f;
 }
 
 .border-darkGreen-700 {
   border-color: #2d6a6a;
 }
 
-.border-darkGreen-600 {
-  border-color: #3a8585;
-}
 
-/* Dropdown transition styles */
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-  max-height: 0;
-}
-
-.dropdown-enter-to,
-.dropdown-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-  max-height: 200px;
+.shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 </style>

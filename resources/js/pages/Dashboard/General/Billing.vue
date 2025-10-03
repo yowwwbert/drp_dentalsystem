@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
 
@@ -38,6 +38,19 @@ interface Appointment {
   status: string;
   services: string[];
   billing_id: string | null;
+}
+
+interface Branch {
+  branch_id: string;
+  branch_name: string;
+}
+
+interface User {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  user_type: string;
+  branch_id?: string; // Updated to match backend
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -83,12 +96,31 @@ const showDiscount = ref(false);
 const billings = ref<Billing[]>([]);
 const totalRecords = ref(0);
 
+const page = usePage<{ auth: { user: User | null } }>();
+const user = computed(() => page.props.auth.user);
+const userType = computed(() => user.value?.user_type || 'User');
+const userId = computed(() => user.value?.user_id || '');
+const userBranchId = computed(() => user.value?.branch_id || null);
+const isPatient = computed(() => userType.value === 'Patient');
+const canModify = computed(() => !isPatient.value);
+
 const fetchBillings = async () => {
   try {
-    const response = await axios.get('/api/billings');
+    // Prepare query parameters based on user_type
+    const params: Record<string, string> = {};
+    if (userType.value === 'Patient') {
+      params.patient_id = userId.value;
+    } else if (userType.value === 'Dentist') {
+      params.dentist_id = userId.value;
+    } else if (userType.value === 'Receptionist' && userBranchId.value) {
+      params.branch_id = userBranchId.value;
+    }
+    // No params for Owner to fetch all billings
+
+    const response = await axios.get('/api/billings', { params });
     billings.value = response.data.data;
     totalRecords.value = response.data.total_records;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching billings:', error);
     alert('Failed to fetch billings: ' + (error.response?.data?.error || 'Unknown error'));
   }
@@ -99,7 +131,7 @@ const fetchBillingById = async (billingId: string) => {
     const billing = billings.value.find((b: Billing) => b.billing_id === billingId);
     if (!billing) throw new Error('Billing not found');
     return billing;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching billing:', error);
     alert('Failed to fetch billing: ' + (error.message || 'Unknown error'));
     return null;
@@ -109,10 +141,18 @@ const fetchBillingById = async (billingId: string) => {
 const fetchAppointments = async () => {
   try {
     console.log("Fetching appointments...");
+    const params: Record<string, string> = {};
+    if (userType.value === 'Patient') {
+      params.patient_id = userId.value;
+    } else if (userType.value === 'Dentist') {
+      params.dentist_id = userId.value;
+    } else if (userType.value === 'Receptionist' && userBranchId.value) {
+      params.branch_id = userBranchId.value;
+    }
+    // No params for Owner to fetch all appointments
 
-    const response = await axios.get('/dashboard/appointments');
+    const response = await axios.get('/dashboard/appointments', { params });
     console.log("Raw response:", response);
-
     console.log("Appointments from response:", response.data.appointments);
 
     const validAppointments = response.data.appointments.filter((appointment: Appointment) => {
@@ -130,7 +170,6 @@ const fetchAppointments = async () => {
     });
 
     console.log("Filtered valid appointments:", validAppointments);
-
     appointments.value = validAppointments;
   } catch (error: any) {
     console.error('Error fetching appointments:', error);
@@ -138,10 +177,11 @@ const fetchAppointments = async () => {
   }
 };
 
-
 onMounted(() => {
   fetchBillings();
-  fetchAppointments();
+  if (canModify.value) {
+    fetchAppointments();
+  }
 });
 
 watch(selectedAppointmentId, (newVal) => {
@@ -234,6 +274,10 @@ const handleViewBilling = async (billingId: string) => {
 };
 
 const handleCreateBilling = () => {
+  if (!canModify.value) {
+    alert('You do not have permission to create billings.');
+    return;
+  }
   billingForm.value = {
     billing_id: '',
     patient_id: '',
@@ -253,6 +297,10 @@ const handleCreateBilling = () => {
 };
 
 const handleEditBilling = async (billingId: string) => {
+  if (!canModify.value) {
+    alert('You do not have permission to edit billings.');
+    return;
+  }
   const billing = await fetchBillingById(billingId);
   if (billing) {
     billingForm.value = {
@@ -329,7 +377,7 @@ const wholeDiscountAmount = computed(() => {
   if (billingForm.value.discount_scope === 'whole' && billingForm.value.discount_type && billingForm.value.discount_value > 0) {
     if (billingForm.value.discount_type === 'percentage') {
       return subTotal.value * (billingForm.value.discount_value / 100);
-    } else if (procedure.discount_type === 'amount') {
+    } else if (billingForm.value.discount_type === 'amount') {
       return Math.min(billingForm.value.discount_value, subTotal.value);
     }
   }
@@ -357,6 +405,10 @@ const removeDiscount = () => {
 };
 
 const createBilling = async () => {
+  if (!canModify.value) {
+    alert('You do not have permission to create billings.');
+    return;
+  }
   if (!billingForm.value.patient_id || !selectedAppointmentId.value) {
     alert('Please select an appointment.');
     return;
@@ -382,13 +434,17 @@ const createBilling = async () => {
     await axios.post('/api/billings', payload);
     await Promise.all([fetchBillings(), fetchAppointments()]);
     closeCreateBillingModal();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating billing:', error);
     alert('Failed to create billing: ' + (error.response?.data?.error || 'Unknown error'));
   }
 };
 
 const saveBilling = async () => {
+  if (!canModify.value) {
+    alert('You do not have permission to edit billings.');
+    return;
+  }
   try {
     await axios.get('/sanctum/csrf-cookie');
     const payload = {
@@ -406,11 +462,12 @@ const saveBilling = async () => {
       })),
       discount_amount: billingForm.value.discount_scope === 'whole' && billingForm.value.discount_type ? { whole: wholeDiscountAmount.value } : {},
       discount_reason: billingForm.value.discount_scope === 'whole' && billingForm.value.discount_reason ? { whole: billingForm.value.discount_reason } : {},
+      appointment_ids: [selectedAppointmentId.value || billingForm.value.billing_id], // Use existing billing_id if no new appointment selected
     };
     await axios.put(`/api/billings/${billingForm.value.billing_id}`, payload);
     await fetchBillings();
     closeEditBillingModal();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating billing:', error);
     alert('Failed to update billing: ' + (error.response?.data?.error || 'Unknown error'));
   }
@@ -482,7 +539,7 @@ const formatBillingDate = (dateStr: string) => {
             </select>
           </div>
         </div>
-        <div class="flex gap-2">
+        <div v-if="canModify" class="flex gap-2">
           <button
             @click="handleCreateBilling"
             class="bg-darkGreen-900 text-white px-6 py-2 rounded font-semibold shadow hover:bg-darkGreen-800 transition"
@@ -522,6 +579,7 @@ const formatBillingDate = (dateStr: string) => {
                     class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
                   >View</button>
                   <button
+                    v-if="canModify"
                     @click="handleEditBilling(billing.billing_id)"
                     class="bg-darkGreen-900 text-white px-3 py-1 rounded hover:bg-darkGreen-800 transition text-sm"
                   >Edit</button>
@@ -663,25 +721,25 @@ const formatBillingDate = (dateStr: string) => {
             <div class="mt-6">
               <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg font-semibold text-gray-900">Procedures</h3>
-                <button @click="addProcedure" class="bg-darkGreen-900 text-white px-3 py-1 rounded text-sm hover:bg-darkGreen-800 transition">Add Procedure</button>
+                <button v-if="canModify" @click="addProcedure" class="bg-darkGreen-900 text-white px-3 py-1 rounded text-sm hover:bg-darkGreen-800 transition">Add Procedure</button>
               </div>
               <div class="space-y-3">
                 <div v-for="(procedure, index) in billingForm.procedures" :key="index" class="p-4 bg-gray-50 rounded-lg border">
                   <div class="grid grid-cols-3 gap-4">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Procedure</label>
-                      <input v-model="procedure.name" type="text" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model="procedure.name" type="text" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <input v-model="procedure.description" type="text" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model="procedure.description" type="text" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
-                      <input v-model.number="procedure.unit_price" @input="updateProcedureTotal(index)" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model.number="procedure.unit_price" @input="updateProcedureTotal(index)" type="number" min="0" step="0.01" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                   </div>
-                  <div v-if="billingForm.discount_scope === 'procedure'" class="mt-2">
+                  <div v-if="billingForm.discount_scope === 'procedure' && canModify" class="mt-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
                     <select v-model="procedure.discount_type" @change="updateProcedureTotal(index)" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
                       <option value="">None</option>
@@ -692,25 +750,25 @@ const formatBillingDate = (dateStr: string) => {
                   </div>
                   <div class="flex justify-between items-center mt-2">
                     <span class="font-semibold">Total: ₱{{ procedure.total.toLocaleString() }}</span>
-                    <button v-if="billingForm.procedures.length > 1" @click="removeProcedure(index)" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                    <button v-if="billingForm.procedures.length > 1 && canModify" @click="removeProcedure(index)" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
                   </div>
                 </div>
               </div>
             </div>
             <div class="mt-4">
-              <button v-if="!showDiscount" @click="showDiscount = true" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Discount</button>
-              <div v-else>
+              <button v-if="!showDiscount && canModify" @click="showDiscount = true" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Discount</button>
+              <div v-if="showDiscount">
                 <div class="flex justify-between items-center mb-2">
                   <div class="flex items-center gap-2">
                     <label class="block text-sm font-medium text-gray-700">Apply Discount to</label>
                     <div class="flex items-center gap-4">
-                      <label><input v-model="billingForm.discount_scope" type="radio" value="whole" class="mr-1"> Whole Billing</label>
-                      <label><input v-model="billingForm.discount_scope" type="radio" value="procedure" class="mr-1"> Specific Procedure</label>
+                      <label><input v-model="billingForm.discount_scope" type="radio" value="whole" :disabled="!canModify" class="mr-1"> Whole Billing</label>
+                      <label><input v-model="billingForm.discount_scope" type="radio" value="procedure" :disabled="!canModify" class="mr-1"> Specific Procedure</label>
                     </div>
                   </div>
-                  <button @click="removeDiscount" class="text-red-600 hover:text-red-800 text-sm">Remove Discount</button>
+                  <button v-if="canModify" @click="removeDiscount" class="text-red-600 hover:text-red-800 text-sm">Remove Discount</button>
                 </div>
-                <div v-if="billingForm.discount_scope === 'whole'">
+                <div v-if="billingForm.discount_scope === 'whole' && canModify">
                   <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
                   <select v-model="billingForm.discount_type" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
                     <option value="">None</option>
@@ -727,12 +785,12 @@ const formatBillingDate = (dateStr: string) => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea v-model="billingForm.discount_reason" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
+              <textarea v-model="billingForm.discount_reason" :readonly="!canModify" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
             </div>
           </div>
           <div class="flex justify-end gap-3 mt-6">
             <button @click="closeCreateBillingModal" class="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition">Cancel</button>
-            <button @click="createBilling" class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition">Create Billing</button>
+            <button v-if="canModify" @click="createBilling" class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition">Create Billing</button>
           </div>
         </div>
       </div>
@@ -749,7 +807,7 @@ const formatBillingDate = (dateStr: string) => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Billing Date</label>
-                <input v-model="billingForm.billing_date" type="date" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                <input v-model="billingForm.billing_date" type="date" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Patient Name</label>
@@ -757,7 +815,7 @@ const formatBillingDate = (dateStr: string) => {
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select v-model="billingForm.status" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
+                <select v-model="billingForm.status" :disabled="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
                   <option value="Pending">Pending</option>
                   <option value="Partially Paid">Partially Paid</option>
                   <option value="Paid">Paid</option>
@@ -767,25 +825,25 @@ const formatBillingDate = (dateStr: string) => {
             <div class="mt-6">
               <div class="flex justify-between items-center mb-3">
                 <h3 class="text-lg font-semibold text-gray-900">Procedures</h3>
-                <button @click="addProcedure" class="bg-darkGreen-900 text-white px-3 py-1 rounded text-sm hover:bg-darkGreen-800 transition">Add Procedure</button>
+                <button v-if="canModify" @click="addProcedure" class="bg-darkGreen-900 text-white px-3 py-1 rounded text-sm hover:bg-darkGreen-800 transition">Add Procedure</button>
               </div>
               <div class="space-y-3">
                 <div v-for="(procedure, index) in billingForm.procedures" :key="index" class="p-4 bg-gray-50 rounded-lg border">
                   <div class="grid grid-cols-3 gap-4">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Procedure</label>
-                      <input v-model="procedure.name" type="text" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model="procedure.name" type="text" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                      <input v-model="procedure.description" type="text" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model="procedure.description" type="text" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
-                      <input v-model.number="procedure.unit_price" @input="updateProcedureTotal(index)" type="number" min="0" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
+                      <input v-model.number="procedure.unit_price" @input="updateProcedureTotal(index)" type="number" min="0" step="0.01" :readonly="!canModify" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900" />
                     </div>
                   </div>
-                  <div v-if="billingForm.discount_scope === 'procedure'" class="mt-2">
+                  <div v-if="billingForm.discount_scope === 'procedure' && canModify" class="mt-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
                     <select v-model="procedure.discount_type" @change="updateProcedureTotal(index)" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
                       <option value="">None</option>
@@ -796,25 +854,25 @@ const formatBillingDate = (dateStr: string) => {
                   </div>
                   <div class="flex justify-between items-center mt-2">
                     <span class="font-semibold">Total: ₱{{ procedure.total.toLocaleString() }}</span>
-                    <button v-if="billingForm.procedures.length > 1" @click="removeProcedure(index)" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                    <button v-if="billingForm.procedures.length > 1 && canModify" @click="removeProcedure(index)" class="text-red-600 hover:text-red-800 text-sm">Remove</button>
                   </div>
                 </div>
               </div>
             </div>
             <div class="mt-4">
-              <button v-if="!showDiscount" @click="showDiscount = true" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Discount</button>
-              <div v-else>
+              <button v-if="!showDiscount && canModify" @click="showDiscount = true" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Add Discount</button>
+              <div v-if="showDiscount">
                 <div class="flex justify-between items-center mb-2">
                   <div class="flex items-center gap-2">
                     <label class="block text-sm font-medium text-gray-700">Apply Discount to</label>
                     <div class="flex items-center gap-4">
-                      <label><input v-model="billingForm.discount_scope" type="radio" value="whole" class="mr-1"> Whole Billing</label>
-                      <label><input v-model="billingForm.discount_scope" type="radio" value="procedure" class="mr-1"> Specific Procedure</label>
+                      <label><input v-model="billingForm.discount_scope" type="radio" value="whole" :disabled="!canModify" class="mr-1"> Whole Billing</label>
+                      <label><input v-model="billingForm.discount_scope" type="radio" value="procedure" :disabled="!canModify" class="mr-1"> Specific Procedure</label>
                     </div>
                   </div>
-                  <button @click="removeDiscount" class="text-red-600 hover:text-red-800 text-sm">Remove Discount</button>
+                  <button v-if="canModify" @click="removeDiscount" class="text-red-600 hover:text-red-800 text-sm">Remove Discount</button>
                 </div>
-                <div v-if="billingForm.discount_scope === 'whole'">
+                <div v-if="billingForm.discount_scope === 'whole' && canModify">
                   <label class="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
                   <select v-model="billingForm.discount_type" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
                     <option value="">None</option>
@@ -831,12 +889,12 @@ const formatBillingDate = (dateStr: string) => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea v-model="billingForm.discount_reason" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
+              <textarea v-model="billingForm.discount_reason" :readonly="!canModify" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
             </div>
           </div>
           <div class="flex justify-end gap-3 mt-6">
             <button @click="closeEditBillingModal" class="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition">Cancel</button>
-            <button @click="saveBilling" class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition">Save Changes</button>
+            <button v-if="canModify" @click="saveBilling" class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition">Save Changes</button>
           </div>
         </div>
       </div>

@@ -13,6 +13,9 @@ use App\Http\Controllers\Dentist\DentistController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\PaymentController;
 use App\Http\Controllers\Billing\PaymentMethodController;
+use App\Http\Controllers\Patient\DentalChartController;
+use App\Http\Controllers\Patient\ToothRecordController;
+use App\Http\Controllers\Clinic\ToothMarksController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
@@ -49,4 +52,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/payment-methods', [PaymentMethodController::class, 'store']);
         Route::put('/payment-methods/{payment_method_id}', [PaymentMethodController::class, 'update']);
     });
+
+  Route::get('/dental-charts', [DentalChartController::class, 'index'])->name('patient.dental-charts.index');
+Route::post('/dental-charts', [DentalChartController::class, 'store'])->name('patient.dental-charts.store');
+Route::get('/dental-charts/without', [DentalChartController::class, 'withoutCharts'])->name('patient.dental-charts.without');
+Route::get('/dentalChart/{patient_id}', [DentalChartController::class, 'show'])->name('patient.dental.chart');
+Route::get('/dentalChart/{patient_id}/tooth-records', [DentalChartController::class, 'getToothRecords'])->name('patient.dental.tooth-records');
+Route::get('/tooth/{tooth_id}', [ToothRecordController::class, 'edit'])->name('patient.tooth.edit');
+Route::put('/tooth/{tooth_id}', [ToothRecordController::class, 'update'])->name('patient.tooth.update');
+    Route::get('/tooth-marks/data', [ToothMarksController::class, 'index'])->name('tooth-marks.data');
+    Route::post('/tooth-marks', [ToothMarksController::class, 'store'])->name('tooth-marks.store');
+    Route::put('/tooth-marks/{tooth_mark_id}', [ToothMarksController::class, 'update'])->name('tooth-marks.update');
+    Route::delete('/tooth-marks/{tooth_mark_id}', [ToothMarksController::class, 'destroy'])->name('tooth-marks.destroy');
+
 });

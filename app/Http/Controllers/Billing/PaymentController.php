@@ -60,8 +60,9 @@ class PaymentController extends Controller
                     'status' => $payment->status,
                     'payment_type' => $payment->payment_type,
                     'notes' => $payment->notes,
-                    'handled_by' => $payment->handled_by, // Return raw user_id
+                    'handled_by' => $payment->handledByUser->last_name . ', ' . $payment->handledByUser->first_name, // Return raw user_id
                     'appointment_details' => $payment->appointment && $payment->appointment->schedule ? [
+                            'appointment_id' => $payment->appointment->appointment_id,
                         'schedule_date' => $payment->appointment->schedule->schedule_date,
                         'start_time' => $payment->appointment->schedule->start_time,
                         'services' => $payment->appointment->treatments->pluck('treatment_name')->toArray(),
@@ -98,8 +99,8 @@ class PaymentController extends Controller
                 'payment_method_id' => 'required|string|exists:payment_methods,payment_method_id',
                 'amount' => 'required|numeric|min:0',
                 'payment_date' => 'required|date_format:Y-m-d',
-                'status' => 'required|in:pending,completed,failed,refunded',
-                'payment_type' => 'required|in:partial,full',
+                'status' => 'required|in:Pending,Completed,Failed,Refunded',
+                'payment_type' => 'required|in:Partial,Full,Advance',
                 'notes' => 'nullable|string',
                 'handled_by' => 'required|string|exists:users,user_id', // Validate handled_by
             ]);
@@ -114,7 +115,7 @@ class PaymentController extends Controller
                 $payment = Payment::create($data);
 
                 // Decrement patient balance for completed payments
-                if ($data['status'] === 'completed') {
+                if ($data['status'] === 'Completed') {
                     $updatedRows = Patient::where('patient_id', $data['patient_id'])
                         ->decrement('remaining_balance', $data['amount']);
                     if ($updatedRows === 0) {
@@ -164,6 +165,7 @@ class PaymentController extends Controller
                         'notes' => $payment->notes,
                         'handled_by' => $payment->handled_by, // Return raw user_id
                         'appointment_details' => $payment->appointment && $payment->appointment->schedule ? [
+                            'appointment_id' => $payment->appointment->appointment_id,
                             'schedule_date' => $payment->appointment->schedule->schedule_date,
                             'start_time' => $payment->appointment->schedule->start_time,
                             'services' => $payment->appointment->treatments->pluck('treatment_name')->toArray(),
@@ -198,8 +200,8 @@ class PaymentController extends Controller
                 'payment_method_id' => 'required|string|exists:payment_methods,payment_method_id',
                 'amount' => 'required|numeric|min:0',
                 'payment_date' => 'required|date_format:Y-m-d',
-                'status' => 'required|in:pending,completed,failed,refunded',
-                'payment_type' => 'required|in:partial,full',
+                'status' => 'required|in:Pending,Completed,Failed,Refunded',
+                'payment_type' => 'required|in:Partial,Full,Advance',
                 'notes' => 'nullable|string',
                 'handled_by' => 'required|string|exists:users,user_id', // Validate handled_by
             ]);
@@ -217,10 +219,10 @@ class PaymentController extends Controller
                 $payment->update($data);
 
                 // Adjust patient balance
-                if ($originalStatus === 'completed' && $data['status'] !== 'completed') {
+                if ($originalStatus === 'Completed' && $data['status'] !== 'Completed') {
                     Patient::where('patient_id', $originalPatientId)
                         ->increment('remaining_balance', $originalAmount);
-                } elseif ($data['status'] === 'completed') {
+                } elseif ($data['status'] === 'Completed') {
                     Patient::where('patient_id', $data['patient_id'])
                         ->decrement('remaining_balance', $data['amount']);
                 }
@@ -267,6 +269,7 @@ class PaymentController extends Controller
                         'notes' => $payment->notes,
                         'handled_by' => $payment->handled_by, // Return raw user_id
                         'appointment_details' => $payment->appointment && $payment->appointment->schedule ? [
+                            'appointment_id' => $payment->appointment->appointment_id,
                             'schedule_date' => $payment->appointment->schedule->schedule_date,
                             'start_time' => $payment->appointment->schedule->start_time,
                             'services' => $payment->appointment->treatments->pluck('treatment_name')->toArray(),

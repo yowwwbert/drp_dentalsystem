@@ -16,11 +16,44 @@ class BillingController extends Controller
     public function fetchAll(Request $request)
     {
         Log::info('Fetching all billings', [
+            'user_id' => auth()->user()->id ?? 'N/A',
+            'user_type' => auth()->user()->user_type ?? 'N/A',
             'request_parameters' => $request->query(),
         ]);
 
-        // Include appointments relationship
-        $billings = Billings::query()->with(['patient.user', 'appointments'])->get();
+        $query = Billings::query()->with(['patient.user', 'appointments']);
+
+        $user = auth()->user();
+
+        // Apply user-based filtering
+        if ($user->user_type === 'Patient') {
+            $query->where('patient_id', $user->id);
+            Log::info("Filtering billings for patient_id: {$user->id}");
+        } elseif ($user->user_type === 'Dentist') {
+            $query->whereHas('appointments', function ($q) use ($user) {
+                $q->where('dentist_id', $user->id);
+            });
+            Log::info("Filtering billings for dentist_id: {$user->id}");
+        } elseif ($user->user_type === 'Receptionist' && $user->branch_id) {
+            $query->whereHas('appointments', function ($q) use ($user) {
+                $q->where('branch_id', $user->branch_id);
+            });
+            Log::info("Filtering billings for branch_id: {$user->branch_id}");
+        } elseif ($user->user_type === 'Owner') {
+            Log::info("No filters applied for Owner, fetching all billings");
+        } else {
+            Log::warning("Unauthorized user type: {$user->user_type}");
+            return response()->json(['error' => 'Unauthorized access'], 403);
+        }
+
+        // Apply additional query parameter filters (optional, for flexibility)
+        if ($request->has('patient_id') && !empty($request->query('patient_id')) && $user->user_type === 'Owner') {
+            $patientId = $request->query('patient_id');
+            $query->where('patient_id', $patientId);
+            Log::info("Additional filter applied for patient_id: {$patientId}");
+        }
+
+        $billings = $query->get();
 
         Log::info('Raw billings data retrieved:', [
             'total_records' => $billings->count(),
@@ -75,6 +108,14 @@ class BillingController extends Controller
 
     public function create(Request $request)
     {
+        $user = auth()->user();
+
+        // Restrict Patients from creating billings
+        if ($user->user_type === 'Patient') {
+            Log::warning("Patient attempted to create billing", ['user_id' => $user->id]);
+            return response()->json(['error' => 'Unauthorized: Patients cannot create billings'], 403);
+        }
+
         $validated = $request->validate([
             'patient_id' => 'required|string|exists:patients,patient_id',
             'billing_date' => 'required|date',
@@ -92,6 +133,21 @@ class BillingController extends Controller
             'appointment_ids' => 'required|array|min:1',
             'appointment_ids.*' => 'required|string|exists:appointments,appointment_id',
         ]);
+
+        // Verify branch_id for Receptionist and Dentist
+        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
+            $appointments = Appointment::whereIn('appointment_id', $validated['appointment_ids'])->get();
+            foreach ($appointments as $appointment) {
+                if ($appointment->branch_id !== $user->branch_id) {
+                    Log::warning("Unauthorized: Appointment not in user's branch", [
+                        'user_id' => $user->id,
+                        'branch_id' => $user->branch_id,
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                    return response()->json(['error' => 'Unauthorized: Appointment not in your branch'], 403);
+                }
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -117,8 +173,8 @@ class BillingController extends Controller
             if ($updated === 0) {
                 throw new \Exception('No eligible appointments were updated. All provided appointments may already be linked to a billing.');
             }
-            
-            $updatedBalance = Patient::Where('patient_id', $validated['patient_id'])
+
+            $updatedBalance = Patient::where('patient_id', $validated['patient_id'])
                 ->increment('remaining_balance', $validated['amount']);
 
             DB::commit();
@@ -136,7 +192,30 @@ class BillingController extends Controller
 
     public function update(Request $request, $billingId)
     {
+        $user = auth()->user();
+
+        // Restrict Patients from updating billings
+        if ($user->user_type === 'Patient') {
+            Log::warning("Patient attempted to update billing", ['user_id' => $user->id, 'billing_id' => $billingId]);
+            return response()->json(['error' => 'Unauthorized: Patients cannot update billings'], 403);
+        }
+
         $billing = Billings::where('billing_id', $billingId)->firstOrFail();
+
+        // Verify branch_id for Receptionist and Dentist
+        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
+            $appointments = $billing->appointments;
+            foreach ($appointments as $appointment) {
+                if ($appointment->branch_id !== $user->branch_id) {
+                    Log::warning("Unauthorized: Billing not in user's branch", [
+                        'user_id' => $user->id,
+                        'branch_id' => $user->branch_id,
+                        'billing_id' => $billingId,
+                    ]);
+                    return response()->json(['error' => 'Unauthorized: Billing not in your branch'], 403);
+                }
+            }
+        }
 
         $validated = $request->validate([
             'patient_id' => 'required|string|exists:patients,patient_id',
@@ -156,8 +235,30 @@ class BillingController extends Controller
             'appointment_ids.*' => 'required|string|exists:appointments,appointment_id',
         ]);
 
+        // Verify branch_id for new appointment_ids
+        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
+            $appointments = Appointment::whereIn('appointment_id', $validated['appointment_ids'])->get();
+            foreach ($appointments as $appointment) {
+                if ($appointment->branch_id !== $user->branch_id) {
+                    Log::warning("Unauthorized: New appointment not in user's branch", [
+                        'user_id' => $user->id,
+                        'branch_id' => $user->branch_id,
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                    return response()->json(['error' => 'Unauthorized: Appointment not in your branch'], 403);
+                }
+            }
+        }
+
         try {
             DB::beginTransaction();
+
+            // Update patient balance (subtract old amount, add new amount)
+            $oldAmount = $billing->amount;
+            Patient::where('patient_id', $billing->patient_id)
+                ->decrement('remaining_balance', $oldAmount);
+            Patient::where('patient_id', $validated['patient_id'])
+                ->increment('remaining_balance', $validated['amount']);
 
             $billing->update($validated);
 

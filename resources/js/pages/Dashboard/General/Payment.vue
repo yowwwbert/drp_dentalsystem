@@ -18,10 +18,10 @@ interface Payment {
   amount: number;
   payment_date: string;
   status: string;
-  payment_type: 'partial' | 'full';
+  payment_type: 'Partial' | 'Full' | 'Advance';
   notes: string;
   handled_by: string;
-  appointment_details: { schedule_date: string; start_time: string; services: string[]; status: string; patient_name: string } | null;
+  appointment_details: { appointment_id: string; schedule_date: string; start_time: string; services: string[]; status: string; patient_name: string } | null;
 }
 
 interface Billing {
@@ -37,11 +37,17 @@ interface PaymentMethod {
   payment_method_name: string;
 }
 
+interface Branch {
+  branch_id: string;
+  branch_name: string;
+}
+
 interface User {
   user_id: string;
   first_name: string;
   last_name: string;
   user_type: string;
+  branch: Branch | null; // null if not assigned yet
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -59,6 +65,9 @@ const userFirstName = computed(() => user.value?.first_name || 'User');
 const userPosition = computed(() => user.value?.user_type || 'User');
 const userId = computed(() => user.value?.user_id || '');
 
+const isPatient = computed(() => userPosition.value === 'Patient');
+const canModify = computed(() => !isPatient.value);
+
 // Modal states
 const showViewModal = ref(false);
 const showCreateModal = ref(false);
@@ -75,8 +84,8 @@ const paymentForm = ref({
   payment_method_id: '',
   amount: 0,
   payment_date: new Date().toISOString().split('T')[0], // Default to today
-  status: 'completed',
-  payment_type: 'full' as 'partial' | 'full',
+  status: 'Completed',
+  payment_type: 'Full' as 'Partial' | 'Full' | 'Advance',
   notes: '',
   handled_by: '', // Initialize empty, set in handleCreatePayment/handleEditPayment
 });
@@ -184,7 +193,7 @@ const remainingBalance = computed(() => {
   const billing = billings.value.find(b => b.billing_id === paymentForm.value.billing_id);
   if (!billing) return null;
   const completedPayments = payments.value
-    .filter(p => p.billing_id === paymentForm.value.billing_id && p.status === 'completed' && p.payment_type !== 'refunded')
+    .filter(p => p.billing_id === paymentForm.value.billing_id && p.status.toLowerCase() === 'completed' && p.payment_type.toLowerCase() !== 'refunded')
     .reduce((sum, p) => sum + p.amount, 0);
   return billing.amount - completedPayments;
 });
@@ -214,8 +223,8 @@ const handleCreatePayment = () => {
     payment_method_id: '',
     amount: 0,
     payment_date: new Date().toISOString().split('T')[0],
-    status: 'completed',
-    payment_type: 'full',
+    status: 'Completed',
+    payment_type: 'Full',
     notes: '',
     handled_by: userId.value, // Set to current user_id
   };
@@ -356,7 +365,7 @@ const selectedBillingDetails = computed(() => {
           />
         </div>
       </div>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-4" :class="{ 'blur-[1px]': showViewModal || showCreateModal || showEditModal || showConfirmCreateModal }">
+      <div v-if="canModify" class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-4" :class="{ 'blur-[1px]': showViewModal || showCreateModal || showEditModal || showConfirmCreateModal }">
         <div class="flex gap-2">
           <button
             @click="handleCreatePayment"
@@ -369,10 +378,9 @@ const selectedBillingDetails = computed(() => {
           <thead>
             <tr class="bg-darkGreen-900 text-white">
               <th class="py-3 px-4 text-left font-semibold">Payment ID</th>
-              <th class="py-3 px-4 text-left font-semibold">Patient</th>
+              <th class="py-3 px-4 text-left font-semibold">Patient Name</th>
+              <th class="py-3 px-4 text-left font-semibold">Amount Paid</th>
               <th class="py-3 px-4 text-left font-semibold">Payment Method</th>
-              <th class="py-3 px-4 text-left font-semibold">Amount</th>
-              <th class="py-3 px-4 text-left font-semibold">Payment Date</th>
               <th class="py-3 px-4 text-left font-semibold">Payment Type</th>
               <th class="py-3 px-4 text-left font-semibold">Status</th>
               <th class="py-3 px-4 text-left font-semibold">Handled By</th>
@@ -389,16 +397,20 @@ const selectedBillingDetails = computed(() => {
                 <div class="text-sm text-gray-500">Billing: {{ payment.billing_id }}</div>
               </td>
               <td class="py-3 px-4">{{ payment.patient_name }}</td>
-              <td class="py-3 px-4">{{ payment.payment_method_name }}</td>
               <td class="py-3 px-4 font-semibold text-green-600">₱{{ payment.amount.toLocaleString() }}</td>
-              <td class="py-3 px-4">{{ formatDate(payment.payment_date) }}</td>
-              <td class="py-3 px-4">{{ payment.payment_type }}</td>
+              <td class="py-3 px-4">{{ payment.payment_method_name }}</td>
+              <td class="py-3 px-4">{{ formatStatus(payment.payment_type) }} Payment</td>
               <td class="py-3 px-4">
-                <span :class="`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`">
+                <span :class="`px-2 py-1 rounded-full text-sm font-medium ${getStatusColor(payment.status)}`">
                   {{ formatStatus(payment.status) }}
                 </span>
               </td>
-              <td class="py-3 px-4">{{ payment.handled_by }}</td>
+              <td class="py-3 px-4">
+                <div>{{ payment.handled_by }}</div>
+                <div class="text-xs text-gray-500">
+                  {{ formatDate(payment.payment_date) }}
+                </div>
+              </td>
               <td class="py-3 px-4">
                 <div class="flex gap-2">
                   <button
@@ -406,6 +418,7 @@ const selectedBillingDetails = computed(() => {
                     class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm"
                   >View</button>
                   <button
+                    v-if="canModify"
                     @click="handleEditPayment(payment.payment_id)"
                     class="bg-darkGreen-900 text-white px-3 py-1 rounded hover:bg-darkGreen-800 transition text-sm"
                   >Edit</button>
@@ -485,7 +498,7 @@ const selectedBillingDetails = computed(() => {
             </div>
             <div class="mt-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea :value="selectedPayment.notes || ''" readonly rows="3" class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50"></textarea>
+              <textarea :value="selectedPayment.notes || ''" readonly rows="3" class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 resize-none"></textarea>
             </div>
             <div v-if="selectedPayment.appointment_details" class="mt-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Appointment Details</label>
@@ -562,23 +575,24 @@ const selectedBillingDetails = computed(() => {
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
                 <select v-model="paymentForm.payment_type" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                  <option value="full">Full</option>
-                  <option value="partial">Partial</option>
+                  <option value="Full">Full</option>
+                  <option value="Partial">Partial</option>
+                  <option value="Advance">Advance</option>
                 </select>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select v-model="paymentForm.status" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="refunded">Refunded</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Refunded">Refunded</option>
                 </select>
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea v-model="paymentForm.notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
+              <textarea v-model="paymentForm.notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900 resize-none"></textarea>
             </div>
           </div>
           <div class="flex justify-end gap-3 mt-6">
@@ -592,43 +606,60 @@ const selectedBillingDetails = computed(() => {
       <div v-if="showConfirmCreateModal" class="absolute inset-0 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
           <h2 class="text-xl font-bold text-gray-900 mb-4">Confirm Payment Creation</h2>
-          <div class="space-y-4">
+          <div class="space-y-6">
             <div v-if="selectedAppointmentDetails" class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Appointment Details</label>
-              <div class="bg-gray-50 p-4 rounded border">
-                <p>Appointment ID: {{ selectedAppointmentDetails.appointment_id }}</p>
-                <p>Date: {{ formatDate(selectedAppointmentDetails.date) }}</p>
-                <p>Time: {{ selectedAppointmentDetails.time }}</p>
-                <p>Services: {{ selectedAppointmentDetails.services.join(', ') }}</p>
-                <p>Status: {{ formatStatus(selectedAppointmentDetails.status) }}</p>
-                <p>Patient: {{ selectedAppointmentDetails.patient_name }}</p>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Appointment Details</label>
+              <div class="bg-gray-50 p-4 rounded border grid grid-cols-2 gap-x-4 gap-y-2">
+                <div class="font-medium text-gray-700">Appointment ID:</div>
+                <div>{{ selectedAppointmentDetails.appointment_id }}</div>
+                <div class="font-medium text-gray-700">Date:</div>
+                <div>{{ formatDate(selectedAppointmentDetails.date) }}</div>
+                <div class="font-medium text-gray-700">Time:</div>
+                <div>{{ selectedAppointmentDetails.time }}</div>
+                <div class="font-medium text-gray-700">Services:</div>
+                <div>{{ selectedAppointmentDetails.services.join(', ') }}</div>
+                <div class="font-medium text-gray-700">Status:</div>
+                <div>{{ formatStatus(selectedAppointmentDetails.status) }}</div>
+                <div class="font-medium text-gray-700">Patient:</div>
+                <div>{{ selectedAppointmentDetails.patient_name }}</div>
               </div>
             </div>
             <div v-else class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Appointment Details</label>
-              <div class="bg-gray-50 p-4 rounded border">
-                <p>No appointment selected</p>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Appointment Details</label>
+              <div class="bg-gray-50 p-4 rounded border text-center text-gray-500">
+                No appointment selected
               </div>
             </div>
             <div v-if="selectedBillingDetails" class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Billing Details</label>
-              <div class="bg-gray-50 p-4 rounded border">
-                <p>Billing ID: {{ selectedBillingDetails.billing_id }}</p>
-                <p>Patient: {{ selectedBillingDetails.patient_name }}</p>
-                <p>Original Amount: ₱{{ selectedBillingDetails.amount.toLocaleString() }}</p>
-                <p>Remaining Balance: ₱{{ remainingBalance ? remainingBalance.toLocaleString() : 'N/A' }}</p>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Billing Details</label>
+              <div class="bg-gray-50 p-4 rounded border grid grid-cols-2 gap-x-4 gap-y-2">
+                <div class="font-medium text-gray-700">Billing ID:</div>
+                <div>{{ selectedBillingDetails.billing_id }}</div>
+                <div class="font-medium text-gray-700">Patient:</div>
+                <div>{{ selectedBillingDetails.patient_name }}</div>
+                <div class="font-medium text-gray-700">Original Amount:</div>
+                <div>₱{{ selectedBillingDetails.amount.toLocaleString() }}</div>
+                <div class="font-medium text-gray-700">Remaining Balance:</div>
+                <div>₱{{ remainingBalance ? remainingBalance.toLocaleString() : 'N/A' }}</div>
               </div>
             </div>
             <div class="mt-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Payment Details</label>
-              <div class="bg-gray-50 p-4 rounded border">
-                <p>Amount: ₱{{ paymentForm.amount.toLocaleString() }}</p>
-                <p>Payment Date: {{ formatDate(paymentForm.payment_date) }}</p>
-                <p>Payment Type: {{ paymentForm.payment_type }}</p>
-                <p>Status: {{ formatStatus(paymentForm.status) }}</p>
-                <p>Payment Method: {{ paymentMethods.find(m => m.payment_method_id === paymentForm.payment_method_id)?.payment_method_name || 'N/A' }}</p>
-                <p>Handled By: {{ userId }}</p>
-                <p>Notes: {{ paymentForm.notes || 'N/A' }}</p>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Payment Details</label>
+              <div class="bg-gray-50 p-4 rounded border grid grid-cols-2 gap-x-4 gap-y-2">
+                <div class="font-medium text-gray-700">Amount:</div>
+                <div>₱{{ paymentForm.amount.toLocaleString() }}</div>
+                <div class="font-medium text-gray-700">Payment Date:</div>
+                <div>{{ formatDate(paymentForm.payment_date) }}</div>
+                <div class="font-medium text-gray-700">Payment Type:</div>
+                <div>{{ paymentForm.payment_type }}</div>
+                <div class="font-medium text-gray-700">Status:</div>
+                <div>{{ formatStatus(paymentForm.status) }}</div>
+                <div class="font-medium text-gray-700">Payment Method:</div>
+                <div>{{ paymentMethods.find(m => m.payment_method_id === paymentForm.payment_method_id)?.payment_method_name || 'N/A' }}</div>
+                <div class="font-medium text-gray-700">Handled By:</div>
+                <div>{{ userId }}</div>
+                <div class="font-medium text-gray-700">Notes:</div>
+                <div>{{ paymentForm.notes || 'N/A' }}</div>
               </div>
             </div>
           </div>
@@ -700,17 +731,18 @@ const selectedBillingDetails = computed(() => {
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Payment Type</label>
                 <select v-model="paymentForm.payment_type" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                  <option value="full">Full</option>
-                  <option value="partial">Partial</option>
+                  <option value="Full">Full</option>
+                  <option value="Partial">Partial</option>
+                  <option value="Advance">Advance</option>
                 </select>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select v-model="paymentForm.status" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900">
-                  <option value="pending">Pending</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="refunded">Refunded</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Refunded">Refunded</option>
                 </select>
               </div>
               <div>
@@ -725,7 +757,7 @@ const selectedBillingDetails = computed(() => {
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea v-model="paymentForm.notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"></textarea>
+              <textarea v-model="paymentForm.notes" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900 resize-none"></textarea>
             </div>
           </div>
           <div class="flex justify-end gap-3 mt-6">

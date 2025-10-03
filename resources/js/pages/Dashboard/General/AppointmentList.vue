@@ -1,7 +1,8 @@
+```vue
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
@@ -12,10 +13,20 @@ interface Appointment {
   date: string;
   time: string; // Expected as HH:mm:ss from backend
   branch: string;
+  branch_id: string; // Added for branch-based filtering
   services: string[];
   dentist: string;
+  dentist_id: string; // Added for dentist-based filtering
   status: string;
   balance: number;
+}
+
+interface User {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  user_type: string;
+  branch_id?: string; // For branch-based filtering
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,14 +44,31 @@ const error = ref<string | null>(null);
 
 const appointments = ref<Appointment[]>([]);
 
+const page = usePage<{ auth: { user: User | null } }>();
+const user = computed(() => page.props.auth.user);
+const userType = computed(() => user.value?.user_type || 'User');
+const userId = computed(() => user.value?.user_id || '');
+const userBranchId = computed(() => user.value?.branch_id || null);
+
 onMounted(async () => {
   try {
+    // Prepare query parameters based on user_type
+    const params: Record<string, string> = {};
+    if (userType.value === 'Patient') {
+      params.patient_id = userId.value;
+    } else if (userType.value === 'Dentist') {
+      params.dentist_id = userId.value;
+    } else if (userType.value === 'Receptionist' && userBranchId.value) {
+      params.branch_id = userBranchId.value;
+    }
+    // No params for Owner to fetch all appointments
+
     const response = await axios.get('/dashboard/appointments', {
       headers: { 'Cache-Control': 'no-cache' },
+      params,
     });
     console.log('API Response:', response.data);
 
-    // ✅ FIX: Access response.data.appointments instead of response.data
     appointments.value = response.data.appointments.map((appt: Appointment) => {
       console.log('Appointment Time:', appt.appointment_id, appt.time);
       return appt;
@@ -216,7 +244,7 @@ function saveEdit() {
         <div class="overflow-x-auto">
           <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
             <thead>
-              <tr class="bg-[#1e4f4f] awd text-white rounded-t-lg">
+              <tr class="bg-[#1e4f4f] text-white rounded-t-lg">
                 <th class="px-4 py-2 text-left">Patient Name</th>
                 <th class="px-4 py-2 text-left">Date</th>
                 <th class="px-4 py-2 text-left">Start Time</th>
@@ -351,3 +379,4 @@ function saveEdit() {
     </div>
   </AppLayout>
 </template>
+```

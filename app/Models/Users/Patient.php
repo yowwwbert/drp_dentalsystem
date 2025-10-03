@@ -39,4 +39,8 @@ class Patient extends Model
     {
         return $this->hasMany('App\Models\Billing\Payments', 'patient_id', 'patient_id');
     }
+    public function dentalCharts()
+    {
+        return $this->hasMany(\App\Models\Patient\DentalChart::class, 'patient_id', 'patient_id');
+    }
 }

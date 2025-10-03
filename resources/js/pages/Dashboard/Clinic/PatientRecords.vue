@@ -1,7 +1,8 @@
+```vue
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
@@ -68,7 +69,6 @@ onMounted(async () => {
 </script>
 
 <template>
-
   <Head title="Patient Records" />
 
   <AppLayout :breadcrumbs="breadcrumbs">
@@ -90,8 +90,6 @@ onMounted(async () => {
       </div>
 
       <div v-else class="bg-white rounded-lg shadow-md p-6">
-
-
         <div class="overflow-x-auto">
           <table class="min-w-full bg-white shadow overflow-hidden">
             <thead>
@@ -113,12 +111,15 @@ onMounted(async () => {
                   {{ patient.created_at ? new Date(patient.created_at).toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
-                  year: 'numeric'
+                    year: 'numeric'
                   }) : 'N/A' }}
                 </td>
                 <td class="px-4 py-2">₱ {{ patient.balance || 0 }} </td>
-                <td class=" py-2">
-                  <button class="bg-[#3E7F7B] text-white px-8 py-2 rounded-lg">View</button>
+                <td class="py-2">
+                  <Link :href="`/dentalChart/${patient.patient_id}`"
+                    class="bg-[#3E7F7B] text-white px-8 py-2 rounded-lg">
+                    View
+                  </Link>
                 </td>
               </tr>
             </tbody>

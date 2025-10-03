@@ -2,7 +2,7 @@
 import { Label } from '@/components/ui/label';
 import AppointmentLayout from '@/layouts/form/AppointmentLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { LoaderCircle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ interface Treatment {
 
 const props = defineProps<{
   branch_id?: string;
+  branch_name?: string; // Provided from previous step
 }>();
 
 const dentists = ref<Dentist[]>([]);
@@ -31,19 +32,37 @@ const selectedTreatments = ref<Treatment[]>([]);
 
 const form = useForm({
   branch_id: props.branch_id || sessionStorage.getItem('selected_branch_id') || '',
+  branch_name: props.branch_name || sessionStorage.getItem('selected_branch_name') || '', // Initialize from props or session
   dentist_id: '',
+  dentist_name: '',
   treatment_ids: [] as string[],
+  treatment_names: [] as string[],
 });
 
-// Fetch dentists + treatments
+// Fetch dentists and treatments
 onMounted(async () => {
+  // Debug: Log initial branch_name and session storage
+  console.log('Initial props:', { branch_id: props.branch_id, branch_name: props.branch_name });
+  console.log('Initial session storage:', {
+    selected_branch_id: sessionStorage.getItem('selected_branch_id'),
+    selected_branch_name: sessionStorage.getItem('selected_branch_name'),
+  });
+  console.log('Initial form:', form);
+
+  // Ensure branch_name is set from session if not provided in props
+  if (!form.branch_name && sessionStorage.getItem('selected_branch_name')) {
+    form.branch_name = sessionStorage.getItem('selected_branch_name') || '';
+  }
+
   try {
+    // Fetch treatments
     const treatmentResponse = await axios.get(route('appointment.treatments'));
     treatments.value = treatmentResponse.data || [];
     if (!treatments.value.length) {
       errorMessage.value = 'No treatments available. Please try again later.';
     }
 
+    // Fetch dentists
     if (form.branch_id) {
       const dentistResponse = await axios.get(route('appointment.dentists', {
         branch_id: form.branch_id
@@ -59,7 +78,21 @@ onMounted(async () => {
     console.error('Error fetching data:', error);
     errorMessage.value = 'Failed to load data. Please try again.';
   }
+
+  // Debug: Log final form state after fetching
+  console.log('Form after onMounted:', form);
 });
+
+const selectDentist = (dentistID: string) => {
+  const selectedDentist = dentists.value.find(dentist => dentist.user_id === dentistID);
+  if (selectedDentist) {
+    form.dentist_id = selectedDentist.user_id;
+    form.dentist_name = `${selectedDentist.last_name}, ${selectedDentist.first_name}`;
+  } else {
+    form.dentist_id = '';
+    form.dentist_name = '';
+  }
+};
 
 // Toggle treatment selection
 const toggleTreatment = (t: Treatment) => {
@@ -67,7 +100,6 @@ const toggleTreatment = (t: Treatment) => {
   if (exists) {
     selectedTreatments.value = selectedTreatments.value.filter(sel => sel.treatment_id !== t.treatment_id);
   } else {
-    // Only allow valid combinations
     if (isValidNextSelection(t)) {
       selectedTreatments.value.push(t);
     } else {
@@ -76,32 +108,40 @@ const toggleTreatment = (t: Treatment) => {
     }
   }
   form.treatment_ids = selectedTreatments.value.map(sel => sel.treatment_id);
+  form.treatment_names = selectedTreatments.value.map(sel => sel.treatment_name);
 };
 
 // Validation rules
 const isValidNextSelection = (t: Treatment) => {
   const current = [...selectedTreatments.value, t];
   const longs = current.filter(c => {
-    const isLong = c.treatment_duration > 30; // Changed from >= 30 to > 30
+    const isLong = c.treatment_duration > 30;
     console.log(`Treatment "${c.treatment_name}" duration: ${c.treatment_duration} => ${isLong ? 'long' : 'short'}`);
     return isLong;
   }).length;
   const shorts = current.filter(c => {
-    const isShort = c.treatment_duration <= 30; // Changed from < 30 to <= 30
+    const isShort = c.treatment_duration <= 30;
     console.log(`Treatment "${c.treatment_name}" duration: ${c.treatment_duration} => ${isShort ? 'short' : 'long'}`);
     return isShort;
   }).length;
 
-  // valid cases
   return (
-    (longs === 0 && shorts <= 2) || // max 2 short
-    (longs === 1 && shorts === 0) || // exactly 1 long
-    (longs === 1 && shorts === 1) // 1 long + 1 short
+    (longs === 0 && shorts <= 2) ||
+    (longs === 1 && shorts === 0) ||
+    (longs === 1 && shorts === 1)
   );
 };
 
 const submitForm = () => {
+  // Ensure branch_name is set from session before submission
+  if (!form.branch_name && sessionStorage.getItem('selected_branch_name')) {
+    form.branch_name = sessionStorage.getItem('selected_branch_name') || '';
+  }
   console.log('Submitting form with data:', form);
+  // Store branch_name in session for consistency
+  if (form.branch_name) {
+    sessionStorage.setItem('selected_branch_name', form.branch_name);
+  }
   form.post(route('dentist.store'), {
     preserveState: true,
     preserveScroll: true,
@@ -137,6 +177,7 @@ const submitForm = () => {
           v-model="form.dentist_id"
           class="border rounded-lg p-2 w-full dark:bg-gray-800 dark:border-gray-600"
           :disabled="!dentists.length"
+          @change="selectDentist($event.target.value)"
         >
           <option value="" disabled>Select a dentist</option>
           <option v-for="dentist in dentists" :key="dentist.user_id" :value="dentist.user_id">

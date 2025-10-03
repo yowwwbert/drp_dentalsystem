@@ -53,18 +53,23 @@ Route::post('/appointment/date-time', [DentistAppointmentController::class, 'sto
 
 Route::get('/appointment/show-dentists', function () {
     $branch_id = session('selected_branch_id');
+    $branch_name = session('selected_branch_name');
     if (!$branch_id) {
         return redirect()->route('appointment')->with('error', 'Please select a branch.');
     }
     return Inertia::render('appointment/SelectDentistAndTreatment', [
         'branch_id' => $branch_id,
+        'branch_name' => $branch_name,
     ]);
 })->name('appointment.show.dentists');
 
 Route::get('/appointment/show-date-time', function () {
     $branch_id = session('selected_branch_id');
+    $branch_name = session('selected_branch_name');
     $dentist_id = session('selected_dentist_id');
+    $dentist_name = session('selected_dentist_name');
     $treatment_ids = session('selected_treatment_ids');
+    $treatment_names = session('selected_treatment_names');
 
     if (!$branch_id || !$dentist_id || empty($treatment_ids)) {
         return redirect()->route('appointment.show.dentists')
@@ -73,8 +78,11 @@ Route::get('/appointment/show-date-time', function () {
 
     return Inertia::render('appointment/SelectDateAndTime', [
         'branch_id' => $branch_id,
+        'branch_name' => $branch_name,
+        'dentist_name' => $dentist_name,
         'dentist_id' => $dentist_id,
         'treatment_ids' => $treatment_ids,
+        'treatment_names' => $treatment_names,
     ]);
 })->name('appointment.show.date-time');
 

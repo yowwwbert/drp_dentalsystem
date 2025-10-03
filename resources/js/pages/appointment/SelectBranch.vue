@@ -18,6 +18,8 @@ interface Branch {
 const branches = ref<Branch[]>([]);
 const form = useForm({
     branch_id: '',
+    branch_name: '',
+    branch_address: '',
 });
 
 const selectedBranchId = ref<string | null>(null);
@@ -36,7 +38,10 @@ onMounted(async () => {
 });
 
 const selectBranch = (branchId: string) => {
+    const selectedBranch = branches.value.find(branch => branch.branch_id === branchId);
     form.branch_id = branchId;
+    form.branch_name = selectedBranch ? selectedBranch.branch_name : '';
+    form.branch_address = selectedBranch ? selectedBranch.branch_address : '';
     selectedBranchId.value = branchId;
 };
 
@@ -44,7 +49,7 @@ const submit = () => {
     form.post(route('branch.store'), {
         preserveState: true,
         preserveScroll: true,
-        forceFormData: true, // Ensure no query parameters are appended
+        forceFormData: true,
         onSuccess: () => {
             console.log('Branch submitted successfully');
         },
@@ -109,14 +114,15 @@ const submit = () => {
                     </div>
                 </div>
                 <InputError :message="form.errors.branch_id" class="mt-2" />
+                <InputError :message="form.errors.branch_name" class="mt-2" />
             </div>
             <div class="flex justify-end mt-4">
                 <Button
                     type="submit"
-                    :disabled="form.processing || !form.branch_id"
+                    :disabled="form.processing || !form.branch_id || !form.branch_name"
                     variant="secondary"
                     class="w-36"
-                    :class="{ 'bg-[#3E7F7B] text-white hover:bg-[#3E7F7B]/50': form.branch_id }"
+                    :class="{ 'bg-[#3E7F7B] text-white hover:bg-[#3E7F7B]/50': form.branch_id && form.branch_name }"
                 >
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     <span v-else>Next</span>
