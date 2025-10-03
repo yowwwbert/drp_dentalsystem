@@ -20,18 +20,17 @@ const goToStep = (step: number) => {
 </script>
 
 <template>
-    <div class="bg-muted flex min-h-svh flex-col items-center justify-center gap-4 p-4 md:p-8">
+    <div class="bg-muted flex min-h-svh flex-col items-center justify-start gap-4 p-8 md:p-8">
         <div class="flex w-full max-w-5xl flex-col gap-5">
-            <!-- Step Indicators -->
             <div class="mb-6 flex w-full max-w-5xl flex-col gap-4">
-                <div class="grid grid-cols-[48px_1fr_48px_1fr_48px_1fr_48px_1fr_48px] items-center justify-items-center gap-0">
+                <div class="grid grid-cols-[48px_1fr_48px_1fr_48px_1fr_48px_1fr_48px] items-center justify-items-center gap-0 pt-24">
                     <!-- Step 1 -->
                     <div
-                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold shadow-md transition-all"
                         :class="{
-                            'bg-[#1E4F4F]': currentStep > 1,
-                            'bg-[#3E7F7B]': currentStep === 1,
-                            'bg-gray-300': currentStep < 1,
+                            'bg-[#1E4F4F] text-white': currentStep > 1,
+                            'border-2 border-[#3E7F7B] bg-white text-[#3E7F7B]': currentStep === 1,
+                            'bg-gray-300 text-white': currentStep < 1,
                         }"
                         @click="goToStep(1)"
                     >
@@ -40,11 +39,11 @@ const goToStep = (step: number) => {
                     <div class="h-1 w-full transition-colors duration-300" :class="currentStep > 1 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
                     <!-- Step 2 -->
                     <div
-                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold shadow-md transition-all"
                         :class="{
-                            'bg-[#1E4F4F]': currentStep > 2,
-                            'bg-[#3E7F7B]': currentStep === 2,
-                            'bg-gray-300': currentStep < 2,
+                            'bg-[#1E4F4F] text-white': currentStep > 2,
+                            'border-2 border-[#3E7F7B] bg-white text-[#3E7F7B]': currentStep === 2,
+                            'bg-gray-300 text-white': currentStep < 2,
                         }"
                         @click="goToStep(2)"
                     >
@@ -53,11 +52,11 @@ const goToStep = (step: number) => {
                     <div class="h-1 w-full transition-colors duration-300" :class="currentStep > 2 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
                     <!-- Step 3 -->
                     <div
-                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold shadow-md transition-all"
                         :class="{
-                            'bg-[#1E4F4F]': currentStep > 3,
-                            'bg-[#3E7F7B]': currentStep === 3,
-                            'bg-gray-300': currentStep < 3,
+                            'bg-[#1E4F4F] text-white': currentStep > 3,
+                            'border-2 border-[#3E7F7B] bg-white text-[#3E7F7B]': currentStep === 3,
+                            'bg-gray-300 text-white': currentStep < 3,
                         }"
                         @click="goToStep(3)"
                     >
@@ -66,11 +65,11 @@ const goToStep = (step: number) => {
                     <div class="h-1 w-full transition-colors duration-300" :class="currentStep > 3 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
                     <!-- Step 4 -->
                     <div
-                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold shadow-md transition-all"
                         :class="{
-                            'bg-[#1E4F4F]': currentStep > 4,
-                            'bg-[#3E7F7B]': currentStep === 4,
-                            'bg-gray-300': currentStep < 4,
+                            'bg-[#1E4F4F] text-white': currentStep > 4,
+                            'border-2 border-[#3E7F7B] bg-white text-[#3E7F7B]': currentStep === 4,
+                            'bg-gray-300 text-white': currentStep < 4,
                         }"
                         @click="goToStep(4)"
                     >
@@ -79,10 +78,10 @@ const goToStep = (step: number) => {
                     <div class="h-1 w-full transition-colors duration-300" :class="currentStep > 4 ? 'bg-[#1E4F4F]' : 'bg-gray-300'"></div>
                     <!-- Step 5 -->
                     <div
-                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                        class="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full text-xl font-bold shadow-md transition-all"
                         :class="{
-                            'bg-[#3E7F7B]': currentStep === 5,
-                            'bg-gray-300': currentStep < 5,
+                            'border-2 border-[#3E7F7B] bg-white text-[#3E7F7B]': currentStep === 5,
+                            'bg-gray-300 text-white': currentStep < 5,
                         }"
                         @click="goToStep(5)"
                     >
@@ -105,11 +104,11 @@ const goToStep = (step: number) => {
 
             <div class="flex flex-col gap-6">
                 <Card class="rounded-xl">
-                    <CardHeader class="px-6 pt-8 pb-0 text-center">
+                    <CardHeader class="px-6 pt-4 pb-0 text-center">
                         <CardTitle class="text-xl">{{ title }}</CardTitle>
                         <CardDescription>{{ description }}</CardDescription>
                     </CardHeader>
-                    <CardContent class="px-6 py-8">
+                    <CardContent class="px-6 py-4">
                         <slot />
                     </CardContent>
                 </Card>

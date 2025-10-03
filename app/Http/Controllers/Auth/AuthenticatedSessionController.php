@@ -63,37 +63,31 @@ class AuthenticatedSessionController extends Controller
                     ->with('error', 'Only patients can book appointments.');
             }
 
-            $branch = Branches::find($pendingAppointment['branch_id'] ?? null);
-            $dentist = User::find($pendingAppointment['dentist_id'] ?? null);
-            $schedule = Schedule::find($pendingAppointment['schedule_id'] ?? null);
-            $treatments = !empty($pendingAppointment['treatment_ids']) && is_array($pendingAppointment['treatment_ids'])
-                ? Treatment::whereIn('treatment_id', $pendingAppointment['treatment_ids'])->get()
-                    ->map(fn($t) => [
-                        'treatment_id' => $t->treatment_id,
-                        'treatment_name' => $t->name,
-                    ])->toArray()
-                : [];
-
+            // Use data directly from session instead of re-fetching to preserve exact values
             $appointmentData = [
-                'branch_id' => $branch?->branch_id,
-                'branch_name' => $branch?->name,
-                'dentist_id' => $dentist?->user_id,
-                'dentist_name' => $dentist?->name,
-                'treatments' => $treatments,
-                'schedule' => $schedule ? [
-                    'schedule_id' => $schedule->schedule_id,
-                    'schedule_date' => $schedule->schedule_date,
-                    'start_time' => $schedule->start_time,
-                    'end_time' => $schedule->end_time,
-                ] : null,
+                'branch_id' => $pendingAppointment['branch_id'],
+                'branch_name' => $pendingAppointment['branch_name'],
+                'dentist_id' => $pendingAppointment['dentist_id'],
+                'dentist_name' => $pendingAppointment['dentist_name'],
+                'schedule_id' => $pendingAppointment['schedule_id'],
+                'schedule_time' => Schedule::where('schedule_id', $pendingAppointment['schedule_id'])->value('start_time'),
+                'schedule_date' => Schedule::where('schedule_id', $pendingAppointment['schedule_id'])->value('schedule_date'),
+                'treatment_ids' => $pendingAppointment['treatment_ids'] ?? [],
+                'treatment_names' => $pendingAppointment['treatment_names'] ?? [],
             ];
 
-            if (!$appointmentData['branch_id'] || !$appointmentData['dentist_id'] || !$appointmentData['treatments'] || !$appointmentData['schedule']) {
-                Log::error('Missing appointment data:', $appointmentData);
+            // Validate required data
+            if (empty($appointmentData['branch_id']) || empty($appointmentData['dentist_id']) || empty($appointmentData['schedule_id']) || empty($appointmentData['treatment_ids'])) {
+                Log::error('Missing appointment data in session:', $pendingAppointment);
+                $request->session()->forget('pending_appointment');
                 return redirect()->route('appointment.show.dentists')
                     ->with('error', 'Some appointment details are missing. Please select again.');
             }
 
+            // Clear the pending appointment from session after processing
+            $request->session()->forget('pending_appointment');
+
+            // Pass the appointment data via flash session for the confirmation page
             return redirect()->route('appointment.confirmation')
                 ->with('appointment', $appointmentData);
         }
