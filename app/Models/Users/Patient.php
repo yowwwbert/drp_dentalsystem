@@ -38,15 +38,26 @@ class Patient extends Model
                         'patient_id' => $patient->patient_id,
                     ]);
 
+                    // All tooth numbers including permanent and temporary teeth
                     $toothNumbers = array_merge(
+                        // Upper temporary teeth
+                        [55, 54, 53, 52, 51, 61, 62, 63, 64, 65],
+                        // Upper permanent teeth
                         range(11, 18), range(21, 28),
-                        range(31, 38), range(41, 48)
+                        // Lower permanent teeth
+                        range(31, 38), range(41, 48),
+                        // Lower temporary teeth
+                        [85, 84, 83, 82, 81, 71, 72, 73, 74, 75]
                     );
 
-                    $surfaces = ['Mesial', 'Distal', 'Buccal', 'Lingual', 'Occlusal'];
+                    // Anterior teeth use different surfaces than posterior teeth
+                    $anteriorTeeth = [
+                        11, 12, 13, 21, 22, 23, 31, 32, 33, 41, 42, 43,
+                        51, 52, 53, 61, 62, 63, 71, 72, 73, 81, 82, 83
+                    ];
 
                     foreach ($toothNumbers as $number) {
-                        // Simple tooth ID format: TOOTH-{chart_id}-{tooth_number}
+                        // Simple tooth ID format: TOOTH-{patient_id}-{tooth_number}
                         $toothId = 'TOOTH-' . $patient->patient_id . '-' . $number;
                         
                         $tooth = Teeth::create([
@@ -59,8 +70,17 @@ class Patient extends Model
                             'updated_by' => $patient->patient_id,
                         ]);
 
+                        // Determine which surfaces to create based on tooth type
+                        if (in_array($number, $anteriorTeeth)) {
+                            // Anterior teeth (incisors and canines)
+                            $surfaces = ['Mesial', 'Distal', 'Labial', 'Lingual', 'Incisal'];
+                        } else {
+                            // Posterior teeth (premolars and molars)
+                            $surfaces = ['Mesial', 'Distal', 'Buccal', 'Lingual', 'Occlusal'];
+                        }
+
                         foreach ($surfaces as $surfaceType) {
-                            // Simple surface ID format: SURF-{tooth_id}-{surface_type_initial}
+                            // Simple surface ID format: SURF-{patient_id}-{tooth_number}-{surface_type_initial}
                             $surfaceInitial = substr($surfaceType, 0, 1);
                             $surfaceId = 'SURF-' . $patient->patient_id . '-' . $number . '-' . $surfaceInitial;
                             
