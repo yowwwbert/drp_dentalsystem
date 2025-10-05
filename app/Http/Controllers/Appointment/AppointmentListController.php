@@ -32,14 +32,20 @@ class AppointmentListController extends Controller
             ->map(function ($appointment) {
                 $appointmentData = [
                     'appointment_id' => $appointment->appointment_id,
-                    'patient' => $appointment->patient && $appointment->patient->user 
-                        ? $appointment->patient->user->last_name . ', ' . $appointment->patient->user->first_name 
+                    'patient_first_name' => $appointment->patient && $appointment->patient->user 
+                        ? $appointment->patient->user->first_name 
+                        : 'N/A',
+                    'patient_last_name' => $appointment->patient && $appointment->patient->user 
+                        ? $appointment->patient->user->last_name 
                         : 'N/A',
                     'patient_id' => $appointment->patient_id ?? 'N/A',
                     'balance' => $appointment->patient ? ($appointment->patient->balance ?? 0) : 0,
                     'date' => $appointment->schedule ? ($appointment->schedule->schedule_date ?? 'N/A') : 'N/A',
-                    'time' => $appointment->schedule && $appointment->schedule->start_time 
+                    'start_time' => $appointment->schedule && $appointment->schedule->start_time 
                         ? date('H:i:s', strtotime($appointment->schedule->start_time)) 
+                        : 'N/A',
+                    'end_time' => $appointment->schedule && $appointment->schedule->end_time 
+                        ? date('H:i:s', strtotime($appointment->schedule->end_time)) 
                         : 'N/A',
                     'branch' => $appointment->branch ? ($appointment->branch->branch_name ?? 'N/A') : 'N/A',
                     'services' => $appointment->treatment_name ? (is_array($appointment->treatment_name) ? $appointment->treatment_name : [$appointment->treatment_name]) : ['General Checkup'],
@@ -48,15 +54,23 @@ class AppointmentListController extends Controller
                         : 'N/A',
                     'status' => $appointment->status ?? 'Scheduled',
                     'billing_id' => $appointment->billing_id ?? null,
+                    'created_at' => $appointment->created_at 
+                        ? date('F j, Y, g:i A', strtotime($appointment->created_at)) 
+                        : 'N/A',
+                    'updated_at' => $appointment->updated_at 
+                        ? date('F j, Y, g:i A', strtotime($appointment->updated_at)) 
+                        : 'N/A',
                 ];
 
-                // Log schedule-related data for debugging after formatting
+                // Log schedule-related data for debugging
                 Log::info('Appointment Schedule Data', [
                     'appointment_id' => $appointment->appointment_id,
                     'schedule_id' => $appointment->schedule_id,
                     'schedule' => $appointment->schedule ? $appointment->schedule->toArray() : null,
-                    'start_time' => $appointment->schedule ? ($appointment->schedule->start_time ?? 'null') : 'no schedule',
-                    'formatted_time' => $appointmentData['time'],
+                    'start_time' => $appointmentData['start_time'],
+                    'end_time' => $appointmentData['end_time'],
+                    'created_at' => $appointmentData['created_at'],
+                    'updated_at' => $appointmentData['updated_at'],
                     'billing_id' => $appointmentData['billing_id'],
                 ]);
 
