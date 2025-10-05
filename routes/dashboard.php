@@ -16,11 +16,15 @@ use App\Http\Controllers\Billing\PaymentMethodController;
 use App\Http\Controllers\Patient\DentalChartController;
 use App\Http\Controllers\Patient\ToothRecordController;
 use App\Http\Controllers\Clinic\ToothMarksController;
+use App\Http\Controllers\Appointment\ManageAppointmentController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
     Route::get('/dashboard/patients', [PatientListController::class, 'index'])->name('dashboard.patients');
     Route::get('/dashboard/appointments', [AppointmentListController::class, 'index'])->name('dashboard.appointments');
+
+    // Appointment Management Routes - Page view
+    Route::get('/appointments/{appointmentId}/manage', [ManageAppointmentController::class, 'manage'])->name('appointments.manage');
 
     Route::prefix('dashboard/owner/api')->group(function () {
         Route::get('/branches', [BranchController::class, 'index']);
@@ -40,6 +44,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/pages/Accounts/Owner Dashboard/Own_DentistInformation/{dentist_id?}', [DentistController::class, 'index'])->name('owner.dentist.records');
 
     Route::prefix('api')->group(function () {
+        // Appointment Management API Routes
+        Route::get('/appointments/{appointmentId}', [ManageAppointmentController::class, 'show'])->name('appointments.api.show');
+        Route::put('/appointments/{appointmentId}', [ManageAppointmentController::class, 'reschedule'])->name('appointments.api.reschedule');
+        Route::post('/appointments/{appointmentId}/cancel', [ManageAppointmentController::class, 'cancel'])->name('appointments.api.cancel');
+        Route::put('/appointments/{appointmentId}/status', [ManageAppointmentController::class, 'updateStatus'])->name('appointments.api.status');
+
         Route::post('/billings', [BillingController::class, 'create']);
         Route::get('/billings', [BillingController::class, 'fetchAll']);
         Route::put('/billings/{billingId}', [BillingController::class, 'update'])->where('billingId', '[0-9a-zA-Z-]+');
@@ -53,16 +63,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/payment-methods/{payment_method_id}', [PaymentMethodController::class, 'update']);
     });
 
-  Route::get('/dental-charts', [DentalChartController::class, 'index'])->name('patient.dental-charts.index');
-Route::post('/dental-charts', [DentalChartController::class, 'store'])->name('patient.dental-charts.store');
-Route::get('/dental-charts/without', [DentalChartController::class, 'withoutCharts'])->name('patient.dental-charts.without');
-Route::get('/dentalChart/{patient_id}', [DentalChartController::class, 'show'])->name('patient.dental.chart');
-Route::get('/dentalChart/{patient_id}/tooth-records', [DentalChartController::class, 'getToothRecords'])->name('patient.dental.tooth-records');
-Route::get('/tooth/{tooth_id}', [ToothRecordController::class, 'edit'])->name('patient.tooth.edit');
-Route::put('/tooth/{tooth_id}', [ToothRecordController::class, 'update'])->name('patient.tooth.update');
+    Route::get('/dental-charts', [DentalChartController::class, 'index'])->name('patient.dental-charts.index');
+    Route::post('/dental-charts', [DentalChartController::class, 'store'])->name('patient.dental-charts.store');
+    Route::get('/dental-charts/without', [DentalChartController::class, 'withoutCharts'])->name('patient.dental-charts.without');
+    Route::get('/dentalChart/{patient_id}', [DentalChartController::class, 'show'])->name('patient.dental.chart');
+    Route::get('/dentalChart/{patient_id}/tooth-records', [DentalChartController::class, 'getToothRecords'])->name('patient.dental.tooth-records');
+    Route::get('/tooth/{tooth_id}', [ToothRecordController::class, 'edit'])->name('patient.tooth.edit');
+    Route::put('/tooth/{tooth_id}', [ToothRecordController::class, 'update'])->name('patient.tooth.update');
     Route::get('/tooth-marks/data', [ToothMarksController::class, 'index'])->name('tooth-marks.data');
     Route::post('/tooth-marks', [ToothMarksController::class, 'store'])->name('tooth-marks.store');
     Route::put('/tooth-marks/{tooth_mark_id}', [ToothMarksController::class, 'update'])->name('tooth-marks.update');
     Route::delete('/tooth-marks/{tooth_mark_id}', [ToothMarksController::class, 'destroy'])->name('tooth-marks.destroy');
-
 });

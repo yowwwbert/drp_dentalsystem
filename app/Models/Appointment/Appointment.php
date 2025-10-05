@@ -20,6 +20,7 @@ class Appointment extends Model
         'branch_id',
         'billing_id',
         'status',
+        'reschedule_count',
         'notes',
         'status_changed_by',
         'status_changed_at',

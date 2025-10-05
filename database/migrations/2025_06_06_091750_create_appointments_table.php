@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('branch_id', 50)->comment('ID of the branch');
             $table->string('billing_id', 50)->nullable()->comment('ID of the billing record, if applicable');
             $table->enum('status', ['Scheduled', 'Checked In', 'Completed', 'Cancelled', 'No Show'])->default('Scheduled')->comment('Status of the appointment');
+            $table->integer('reschedule_count')->default(0)->comment('Number of times the appointment has been rescheduled');
             $table->text('notes')->nullable()->comment('Additional notes for the appointment');
             $table->string('status_changed_by', 50)->comment('ID of the user who changed the status of the appointment');
             $table->timestamp('status_changed_at')->nullable()->comment('Timestamp when the status was changed');
