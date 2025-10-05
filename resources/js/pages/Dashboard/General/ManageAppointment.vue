@@ -533,25 +533,25 @@ const canCancel = computed(() => {
             <h2 class="text-xl font-bold mb-4 text-gray-900">Appointment Details</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div v-if="!isPatient" class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Patient</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Patient</span>
                 <p class="text-base font-semibold text-gray-900 mt-1">
                   {{ appointment.patient_first_name }} {{ appointment.patient_last_name }}
                 </p>
                 <p class="text-sm text-gray-500 mt-1">ID: {{ appointment.patient_id }}</p>
               </div>
               <div v-if="!isPatient" class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Appointment ID</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Appointment ID</span>
                 <p class="text-sm text-gray-700 mt-1">{{ appointment.appointment_id }}</p>
               </div>
               <div class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Schedule</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Schedule</span>
                 <p class="text-base font-semibold text-gray-900 mt-1">{{ formatDateWithDay(appointment.date) }}</p>
                 <p class="text-base font-normal text-gray-500 mt-1">
                   {{ formatTime(appointment.start_time) }} - {{ formatTime(appointment.end_time) }}
                 </p>
               </div>
               <div class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Status</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Status</span>
                 <div class="mt-1">
                   <span :class="`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(appointment.status)}`">
                     {{ appointment.status }}
@@ -559,20 +559,20 @@ const canCancel = computed(() => {
                 </div>
               </div>
               <div class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Branch</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Branch</span>
                 <p class="text-base font-semibold text-gray-900 mt-1">{{ appointment.branch }}</p>
               </div>
               <div class="bg-white p-3 rounded shadow-sm">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Dentist</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Dentist</span>
                 <p class="text-base font-semibold text-gray-900 mt-1">{{ appointment.dentist }}</p>
               </div>
               
               <div class="bg-white p-3 rounded shadow-sm md:col-span-2 lg:col-span-3">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Services</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Services</span>
                 <p class="text-base font-semibold text-gray-900 mt-1">{{ appointment.services.join(', ') }}</p>
               </div>
               <div v-if="appointment.notes" class="bg-white p-3 rounded shadow-sm md:col-span-2 lg:col-span-3">
-                <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Notes</span>
+                <span class="text-sm font-medium text-darkGreen-900 uppercase ">Notes</span>
                 <p class="text-sm text-gray-700 mt-1">{{ appointment.notes }}</p>
               </div>
             </div>
