@@ -23,9 +23,6 @@ Route::middleware('guest')->group(function () {
 
     Route::post('register', [RegisteredUserController::class, 'store']);
 
-    // Route::get('login', [AuthenticatedSessionController::class, 'create'])
-    //     ->name('login');
-
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
@@ -39,36 +36,41 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
-    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create']) //Page ng medical
+
+    Route::get('/medical-information', [PatientMedicalInfoController::class, 'create'])
         ->name('medical-information');
 
-    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store']) //Save ng medical
+    Route::post('/medical-information', [PatientMedicalInfoController::class, 'store'])
         ->name('medical-information.store');
 });
 
 Route::middleware('auth')->group(function () {
+    // New route for owners to register staff
+    Route::get('owner/register-staff', [RegisteredUserController::class, 'create'])
+        ->name('owner.register-staff');
 
-    Route::get('verify-email', EmailVerificationPromptController::class) //Renders the email verification page and sends the verification link
+    Route::post('owner/register-staff', [RegisteredUserController::class, 'storeOwnerStaff']);
+
+    Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
-    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class) //Check if verified 
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
 
-    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store']) //Resend din
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
 
-    Route::get('verify-phone', [PhoneVerificationPromptController::class, '__invoke']) //Page ng phone verification
-        ->name('phone.verification.notice')
-        ->middleware('auth');
+    Route::get('verify-phone', [PhoneVerificationPromptController::class, '__invoke'])
+        ->name('phone.verification.notice');
 
-    Route::post('phone/verify', [VerifyPhoneController::class, '__invoke']) //Check ng OTP
+    Route::post('phone/verify', [VerifyPhoneController::class, '__invoke'])
         ->name('phone.verify.store')
-        ->middleware(['auth', 'throttle:6,1']);
+        ->middleware('throttle:6,1');
 
-    Route::post('phone/verification-notification', [PhoneVerificationNotificationController::class, 'store']) //To resend ang OTP sa phone number
-        ->middleware(['auth', 'throttle:6,1'])
+    Route::post('phone/verification-notification', [PhoneVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
         ->name('phone.verification.notification');
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
@@ -78,6 +80,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
-
-    
 });
+
+?>

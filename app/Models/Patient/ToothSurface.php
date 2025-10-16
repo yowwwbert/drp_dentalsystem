@@ -15,14 +15,16 @@ class ToothSurface extends Model
         'tooth_id',
         'surface_type',
         'surface_status',
+        'surface_notes',
+        'surface_status_type', // Added for surface-level status
+        'diagnosed_by', // Added for surface-level diagnosed_by
         'created_by',
         'updated_by',
-        'surface_notes',
     ];
 
     public function tooth()
     {
-        return $this->belongsTo(App\Model\Patient\Teeth::class, 'tooth_id', 'tooth_id');
+        return $this->belongsTo(Teeth::class, 'tooth_id', 'tooth_id');
     }
 
     public function toothMark()

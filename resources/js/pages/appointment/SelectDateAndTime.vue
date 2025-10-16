@@ -38,7 +38,9 @@ const form = useForm({
     branch_name: props.branch_name || sessionStorage.getItem('selected_branch_name') || '',
     dentist_name: props.dentist_name || sessionStorage.getItem('selected_dentist_name') || '',
     schedule_id: '',
-    schedule_date: '', // Added schedule_date
+    schedule_date: '',
+    start_time: '',
+    end_time: '',
     treatment_ids: props.treatment_ids || JSON.parse(sessionStorage.getItem('selected_treatment_ids') || '[]'),
     treatment_names: props.treatment_names || JSON.parse(sessionStorage.getItem('selected_treatment_names') || '[]'),
 });
@@ -120,12 +122,16 @@ const selectDate = (dateStr: string) => {
         // Deselect date
         selectedDate.value = '';
         form.schedule_id = '';
-        form.schedule_date = ''; // Reset schedule_date
+        form.schedule_date = '';
+        form.start_time = '';
+        form.end_time = '';
     } else {
-        // Select new date - reset schedule_id and schedule_date
+        // Select new date - reset schedule_id, start_time, and end_time
         selectedDate.value = dateStr;
         form.schedule_id = '';
-        form.schedule_date = dateStr; // Set schedule_date
+        form.schedule_date = dateStr;
+        form.start_time = '';
+        form.end_time = '';
     }
 };
 
@@ -133,7 +139,9 @@ const selectSchedule = (scheduleId: string | number) => {
     form.schedule_id = scheduleId.toString();
     const selected = schedules.value.find((s) => s.schedule_id.toString() === scheduleId.toString());
     if (selected) {
-        form.schedule_date = selected.schedule_date; // Update schedule_date
+        form.schedule_date = selected.schedule_date;
+        form.start_time = selected.start_time;
+        form.end_time = selected.end_time;
     }
 };
 
@@ -169,7 +177,7 @@ onMounted(async () => {
         } else {
             if (availableDates.value.includes(todayStr)) {
                 selectedDate.value = todayStr;
-                form.schedule_date = todayStr; // Set initial schedule_date
+                form.schedule_date = todayStr;
             }
         }
     } catch (error) {
@@ -181,7 +189,7 @@ onMounted(async () => {
 });
 
 const submitForm = () => {
-    if (!form.schedule_id || !form.schedule_date || !form.treatment_ids.length) {
+    if (!form.schedule_id || !form.schedule_date || !form.start_time || !form.end_time || !form.treatment_ids.length) {
         errorMessage.value = 'Please select a date, time, and ensure at least one treatment is selected.';
         return;
     }
@@ -364,10 +372,10 @@ const days = computed(() => {
             <div class="mt-4 flex justify-end">
                 <Button
                     type="submit"
-                    :disabled="form.processing || !form.schedule_id || !form.schedule_date || !form.treatment_ids.length"
+                    :disabled="form.processing || !form.schedule_id || !form.schedule_date || !form.start_time || !form.end_time || !form.treatment_ids.length"
                     variant="secondary"
                     class="w-36"
-                    :class="{ 'bg-[#1E4F4F] text-white hover:bg-[#3E7F7B]/25': form.schedule_id && form.schedule_date && form.treatment_ids.length }"
+                    :class="{ 'bg-[#1E4F4F] text-white hover:bg-[#3E7F7B]/25': form.schedule_id && form.schedule_date && form.start_time && form.end_time && form.treatment_ids.length }"
                 >
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     <span v-else>Next</span>

@@ -3,8 +3,16 @@ import { Label } from '@/components/ui/label';
 import AppointmentLayout from '@/layouts/form/AppointmentLayout.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
-import { LoaderCircle, MapPin, UserRound, Stethoscope, Calendar, Clock, X, Check } from 'lucide-vue-next';
+import { LoaderCircle, MapPin, UserRound, Stethoscope, Calendar, Clock, X, Check, AlertTriangle } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { route } from 'ziggy-js';
 
 interface AppointmentDetails {
@@ -15,12 +23,16 @@ interface AppointmentDetails {
   treatment_ids?: string[];
   treatment_names?: string[];
   treatments?: Array<{ treatment_id: string; treatment_name: string }>;
+  schedule_id?: string;
   schedule?: {
     schedule_id: string;
     schedule_date: string;
     start_time: string;
     end_time: string;
   };
+  schedule_date?: string; // Added for direct fields from verification
+  start_time?: string;   // Added for direct fields from verification
+  end_time?: string;     // Added for direct fields from verification
 }
 
 const props = defineProps<{
@@ -29,6 +41,7 @@ const props = defineProps<{
 }>();
 
 const errorMessage = ref<string>('');
+const showCancelDialog = ref(false);
 
 // Fallback to sessionStorage for treatment_names if not in props
 const treatmentNames = ref<string[]>(
@@ -37,11 +50,12 @@ const treatmentNames = ref<string[]>(
     : JSON.parse(sessionStorage.getItem('selected_treatment_names') || '[]')
 );
 
-// Computed property for day of the week
+// Computed property for day of the week (safe handling)
 const dayOfWeek = computed(() => {
-  if (!props.appointment?.schedule?.schedule_date) return '';
+  const dateStr = props.appointment?.schedule?.schedule_date ?? props.appointment?.schedule_date ?? '';
+  if (!dateStr) return '';
   try {
-    const date = new Date(props.appointment.schedule.schedule_date);
+    const date = new Date(dateStr);
     if (isNaN(date.getTime())) return ''; // Handle invalid date
     return date.toLocaleDateString('en-PH', { weekday: 'long' });
   } catch {
@@ -49,14 +63,27 @@ const dayOfWeek = computed(() => {
   }
 });
 
-// Computed property for formatted time
-const formattedTime = computed(() => {
-  if (!props.appointment?.schedule?.start_time || !props.appointment?.schedule?.end_time) {
+// Computed property for formatted full date (safe handling)
+const formattedDate = computed(() => {
+  const dateStr = props.appointment?.schedule?.schedule_date ?? props.appointment?.schedule_date ?? '';
+  if (!dateStr) return 'Not selected';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Not selected';
+    return date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch {
     return 'Not selected';
   }
-  const startTime = new Date(`${props.appointment.schedule.schedule_date} ${props.appointment.schedule.start_time}`);
-  const endTime = new Date(`${props.appointment.schedule.schedule_date} ${props.appointment.schedule.end_time}`);
-  return `${startTime.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })} - ${endTime.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+});
+
+// Computed property for formatted time
+const formattedTime = computed(() => {
+  const start = props.appointment?.start_time || props.appointment?.schedule?.start_time;
+  const end = props.appointment?.end_time || props.appointment?.schedule?.end_time;
+  if (!start || !end) {
+    return 'Not selected';
+  }
+  return `${start} - ${end}`;
 });
 
 // Computed property for treatment display
@@ -91,7 +118,7 @@ const form = useForm({
   dentist_id: props.appointment?.dentist_id ?? '',
   treatment_ids: props.appointment?.treatment_ids ?? [],
   treatment_names: treatmentNames.value,
-  schedule_id: props.appointment?.schedule?.schedule_id ?? '',
+  schedule_id: props.appointment?.schedule?.schedule_id ?? props.appointment?.schedule_id ?? '',
 });
 
 const submitForm = () => {
@@ -117,6 +144,11 @@ const submitForm = () => {
 const cancel = () => {
   console.log('[ConfirmAppointment] Cancel clicked, redirecting to home route');
   router.get(route('home'));
+};
+
+const confirmCancel = () => {
+  showCancelDialog.value = false;
+  cancel();
 };
 </script>
 
@@ -185,8 +217,8 @@ const cancel = () => {
               <Label class="text-sm font-medium text-gray-600 dark:text-gray-400">Date</Label>
               <p class="text-md font-medium">
                 {{ 
-                  appointment.schedule?.schedule_date 
-                    ? `${dayOfWeek ? dayOfWeek + ', ' : ''}${new Date(appointment.schedule.schedule_date).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}`
+                  appointment.schedule?.schedule_date || appointment.schedule_date
+                    ? ((dayOfWeek ? dayOfWeek + ', ' : '') + formattedDate)
                     : 'Not selected' 
                 }}
               </p>
@@ -201,12 +233,7 @@ const cancel = () => {
             <div class="flex-1">
               <Label class="text-sm font-medium text-gray-600 dark:text-gray-400">Time</Label>
               <p class="text-md font-medium">
-                {{ 
-                  appointment.schedule?.start_time && appointment.schedule?.end_time 
-                    ? `${new Date(appointment.schedule.start_time).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })} - 
-                       ${new Date(appointment.schedule.end_time).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })}` 
-                    : 'Not selected' 
-                }}
+                {{ formattedTime }}
               </p>
             </div>
           </div>
@@ -217,7 +244,7 @@ const cancel = () => {
           <Button
             variant="outline"
             class="w-36 border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
-            @click="cancel"
+            @click="showCancelDialog = true"
             :disabled="form.processing"
           >
             <X class="h-4 w-4 mr-2" />
@@ -240,5 +267,34 @@ const cancel = () => {
         No appointment details available. Please try again.
       </div>
     </div>
+
+    <!-- Cancel Confirmation Dialog -->
+    <Dialog :open="showCancelDialog" @update:open="showCancelDialog = $event">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle class="flex items-center gap-2 text-xl">
+            <AlertTriangle class="h-6 w-6 text-amber-500" />
+            Cancel Appointment?
+          </DialogTitle>
+          <DialogDescription class="text-base pt-2">
+            Are you sure you want to cancel? This will reset all your selections and you'll need to start the booking process from the beginning.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter class="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            @click="showCancelDialog = false"
+          >
+            No, Keep Appointment
+          </Button>
+          <Button
+            @click="confirmCancel"
+            class="bg-red-600 hover:bg-red-700"
+          >
+            Yes, Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </AppointmentLayout>
 </template>

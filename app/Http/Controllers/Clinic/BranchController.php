@@ -11,14 +11,32 @@ use Illuminate\Support\Facades\Log;
 class BranchController extends Controller
 {
     /**
-     * Display a listing of branches.
+     * Display a listing of branches with pagination and search.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
-        $perPage = request()->input('per_page', 10);
-        $branches = Branches::select([
+        // Validate query parameters
+        $validator = Validator::make($request->all(), [
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'search' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            Log::error('Validation failed for branch index query parameters', $validator->errors()->toArray());
+            return response()->json([
+                'message' => 'Invalid query parameters',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $perPage = $request->input('per_page', 10);
+        $search = $request->input('search');
+
+        // Build query
+        $query = Branches::select([
             'branch_id',
             'branch_name',
             'branch_address',
@@ -32,8 +50,19 @@ class BranchController extends Controller
             'operating_days',
             'opening_time',
             'closing_time',
-        ])
-        ->paginate($perPage);
+        ]);
+
+        // Apply search filter if provided
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('branch_name', 'LIKE', "%{$search}%")
+                  ->orWhere('branch_address', 'LIKE', "%{$search}%")
+                  ->orWhere('branch_email', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Paginate results
+        $branches = $query->paginate($perPage);
 
         return response()->json([
             'branches' => $branches->items(),
@@ -57,16 +86,16 @@ class BranchController extends Controller
         $validator = Validator::make($request->all(), [
             'branch_name' => 'required|string|max:255',
             'branch_address' => 'required|string|max:255',
-            'contactNumber' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'logo' => 'nullable|string|max:255',
-            'image' => 'nullable|string|max:255',
-            'map' => 'nullable|url|max:255',
-            'facebook' => 'nullable|url|max:255',
-            'instagram' => 'nullable|url|max:255',
-            'operatingDays' => 'nullable|json',
-            'openingTime' => 'nullable|date_format:H:i',
-            'closingTime' => 'nullable|date_format:H:i',
+            'branch_contact' => 'nullable|string|max:20',
+            'branch_email' => 'nullable|email|max:255',
+            'branch_logo' => 'nullable|string|max:255',
+            'branch_image' => 'nullable|string|max:255',
+            'branch_map' => 'nullable|url|max:255',
+            'branch_facebook' => 'nullable|url|max:255',
+            'branch_instagram' => 'nullable|url|max:255',
+            'operating_days' => 'nullable|json',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i',
         ]);
 
         if ($validator->fails()) {
@@ -78,11 +107,6 @@ class BranchController extends Controller
         }
 
         $branchData = $request->all();
-        // Convert operatingDays array to JSON if it exists
-        if (isset($branchData['operatingDays']) && is_array($branchData['operatingDays'])) {
-            $branchData['operatingDays'] = json_encode($branchData['operatingDays']);
-        }
-
         $branch = Branches::create($branchData);
 
         return response()->json([
@@ -117,18 +141,18 @@ class BranchController extends Controller
         $branch = Branches::where('branch_id', $id)->firstOrFail();
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'branch_name' => 'required|string|max:255',
             'branch_address' => 'required|string|max:255',
-            'contactNumber' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'logo' => 'nullable|string|max:255',
-            'image' => 'nullable|string|max:255',
-            'map' => 'nullable|url|max:255',
-            'facebook' => 'nullable|url|max:255',
-            'instagram' => 'nullable|url|max:255',
-            'operatingDays' => 'nullable|json',
-            'openingTime' => 'nullable|date_format:H:i',
-            'closingTime' => 'nullable|date_format:H:i',
+            'branch_contact' => 'nullable|string|max:20',
+            'branch_email' => 'nullable|email|max:255',
+            'branch_logo' => 'nullable|string|max:255',
+            'branch_image' => 'nullable|string|max:255',
+            'branch_map' => 'nullable|url|max:255',
+            'branch_facebook' => 'nullable|url|max:255',
+            'branch_instagram' => 'nullable|url|max:255',
+            'operating_days' => 'nullable|json',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i',
         ]);
 
         if ($validator->fails()) {
@@ -140,11 +164,6 @@ class BranchController extends Controller
         }
 
         $branchData = $request->all();
-        // Convert operatingDays array to JSON if it exists
-        if (isset($branchData['operatingDays']) && is_array($branchData['operatingDays'])) {
-            $branchData['operatingDays'] = json_encode($branchData['operatingDays']);
-        }
-
         $branch->update($branchData);
 
         return response()->json([

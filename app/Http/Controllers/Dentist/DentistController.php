@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Dentist;
 
 use App\Http\Controllers\Controller;
@@ -18,37 +17,74 @@ class DentistController extends Controller
         ]);
     }
 
-    public function getDentists()
-    {
-        $dentists = Dentist::with(['user', 'branches'])
-            ->get()
-            ->map(function ($dentist) {
-                return [
-                    'dentist_id' => $dentist->dentist_id,
-                    'dentist_type' => $dentist->dentist_type,
-                    'first_name' => $dentist->user->first_name,
-                    'last_name' => $dentist->user->last_name,
-                    'email_address' => $dentist->user->email_address,
-                    'phone_number' => $dentist->user->phone_number,
-                    'position' => 'Dentist',
-                    'status' => $dentist->user->status,
-                    'branch_name' => $dentist->branches->first() ? $dentist->branches->first()->branch_name : 'N/A',
-                    'branch_id' => $dentist->branches->first() ? $dentist->branches->first()->branch_id : null
-                ];
-            });
+   public function getDentists(Request $request)
+{
+    $user = auth()->user();
+    $query = Dentist::with(['user', 'branches']);
 
-        return response()->json([
-            'dentists' => $dentists,
-            'branches' => Branches::select('branch_id', 'branch_name')->get(),
-            'pagination' => [
-                'currentPage' => 1,
-                'totalPages' => 1,
-                'perPage' => 10,
-                'totalRecords' => $dentists->count()
-            ]
-        ]);
+    // Branch filtering logic
+    if ($request->has('branch_id')) {
+        Log::info('Branch filter applied: ' . $request->input('branch_id'));
+        $branchId = $request->input('branch_id');
+        
+        // Only allow branch filtering if user is Owner OR the branch matches their own
+        if ($user->role === 'Owner' || $user->user_branch === $branchId) {
+            $query->whereHas('branches', function ($q) use ($branchId) {
+                $q->where('branch_id', $branchId);
+            });
+        } else {
+            // Staff trying to access another branch - deny
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+    } else {
+        // No branch_id provided
+        if ($user->role !== 'Owner' && $user->user_branch) {
+            // Staff members default to their own branch
+            $query->whereHas('branches', function ($q) use ($user) {
+                $q->where('branch_id', $user->user_branch);
+            });
+        }
+        // Owners with no branch_id param see all dentists
     }
 
+    // Other filters
+    if ($request->has('dentist_type')) {
+        $query->where('dentist_type', $request->input('dentist_type'));
+    }
+    
+    if ($request->has('status')) {
+        $query->whereHas('user', function ($q) use ($request) {
+            $q->where('status', $request->input('status'));
+        });
+    }
+
+    $dentists = $query->get()->map(function ($dentist) {
+        return [
+            'dentist_id' => $dentist->dentist_id,
+            'dentist_type' => $dentist->dentist_type,
+            'first_name' => $dentist->user->first_name,
+            'last_name' => $dentist->user->last_name,
+            'email_address' => $dentist->user->email_address,
+            'phone_number' => $dentist->user->phone_number,
+            'user_id' => $dentist->user->user_id, // Added for the dental chart
+            'position' => 'Dentist',
+            'status' => $dentist->user->status,
+            'branch_name' => $dentist->branches->first()?->branch_name ?? 'N/A',
+            'branch_id' => $dentist->branches->first()?->branch_id ?? null
+        ];
+    });
+
+    return response()->json([
+        'dentists' => $dentists,
+        'branches' => Branches::select('branch_id', 'branch_name')->get(),
+        'pagination' => [
+            'currentPage' => 1,
+            'totalPages' => 1,
+            'perPage' => 10,
+            'totalRecords' => $dentists->count()
+        ]
+    ]);
+}
     public function updateDentist(Request $request, $dentistId)
     {
         $dentist = Dentist::with('user')->where('dentist_id', $dentistId)->firstOrFail();
@@ -81,7 +117,7 @@ class DentistController extends Controller
     public function getDentistDetail($id)
     {
         $dentist = Dentist::with(['user', 'branches'])
-            ->where('dentist_id', $id) // Changed from user_id to dentist_id
+            ->where('dentist_id', $id)
             ->firstOrFail();
 
         $dentistData = [

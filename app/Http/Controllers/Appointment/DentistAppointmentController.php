@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Log;
 class DentistAppointmentController extends Controller
 {
     public function getDentistsForBranch($branch_id)
-    {
-        $dentist_ids = UserBranch::where('branch_id', $branch_id)->pluck('user_id')->toArray();
-        $dentists = User::whereIn('user_id', $dentist_ids)
-            ->select('user_id', 'first_name', 'last_name', 'profile_picture')
-            ->get();
-        return response()->json($dentists);
-    }
-
+{
+    $dentist_ids = UserBranch::where('branch_id', $branch_id)->pluck('user_id')->toArray();
+    $dentists = User::whereIn('user_id', $dentist_ids)
+        ->where('user_type', 'dentist') // Filter for dentists only
+        ->select('user_id', 'first_name', 'last_name', 'profile_picture')
+        ->get();
+    return response()->json($dentists);
+}
     public function store(Request $request)
     {
         $validated = $request->validate([

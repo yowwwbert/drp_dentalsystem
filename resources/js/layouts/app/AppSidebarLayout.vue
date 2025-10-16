@@ -15,12 +15,12 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-    <div class="flex h-screen">
+    <div class="flex h-screen bg-neutral-100 dark:bg-neutral-800">
         <!-- Custom Sidebar -->
         <AppSidebar />
         
         <!-- Content area -->
-        <div class="flex-1 px-8 bg-gray-200 overflow-auto dark:bg-gray-900">
+        <div class="flex-1 px-10 bg-neutral-100 dark:bg-neutral-950 overflow-auto">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </div>

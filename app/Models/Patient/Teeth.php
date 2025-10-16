@@ -17,6 +17,8 @@ class Teeth extends Model
         'tooth_number',
         'tooth_notes',
         'tooth_status',
+        'status_type', // Added to allow mass assignment
+        'diagnosed_by', // Added to allow mass assignment
         'created_by',
         'updated_by',
     ];

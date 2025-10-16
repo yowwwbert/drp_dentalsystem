@@ -65,16 +65,14 @@ onMounted(async () => {
     }
 
     if (form.branch_id) {
-      const dentistResponse = await axios.get(route('appointment.dentists', {
-        branch_id: form.branch_id
-      }));
-      dentists.value = dentistResponse.data || [];
-      if (!dentists.value.length) {
-        errorMessage.value = 'No dentists available for this branch.';
-      }
-    } else {
-      errorMessage.value = 'No branch selected. Please go back and select a branch.';
-    }
+  const dentistResponse = await axios.get(route('appointment.dentists', form.branch_id));
+  dentists.value = dentistResponse.data || [];
+  if (!dentists.value.length) {
+    errorMessage.value = 'No dentists available for this branch.';
+  }
+} else {
+  errorMessage.value = 'No branch selected. Please go back and select a branch.';
+}
   } catch (error) {
     console.error('Error fetching data:', error);
     errorMessage.value = 'Failed to load data. Please try again.';

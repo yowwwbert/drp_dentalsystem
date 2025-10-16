@@ -28,9 +28,9 @@ class DashboardController extends Controller
             } elseif ($userType === 'Dentist') {
                 $appointmentsQuery->where('dentist_id', $user->user_id);
             } elseif ($userType === 'Staff') {
-                $staff = Staff::where('user_id', $user->user_id)->first();
+                $staff = Staff::where('staff_id', $user->user_id)->first();
                 if ($staff && $staff->branches->first()) {
-                    $appointmentsQuery->where('branch_id', $staff->branches->first()->branch_id);
+                    $appointmentsQuery->where('appointments.branch_id', $staff->branches->first()->branch_id);
                 } else {
                     $appointmentsQuery->whereRaw('1 = 0'); // No data if no branch assigned
                 }
@@ -108,7 +108,10 @@ class DashboardController extends Controller
                 'scheduledAppointments' => $scheduledAppointments,
             ]);
         } catch (\Exception $e) {
-            Log::error('Error in dashboard data: ' . $e->getMessage());
+            Log::error('Error in dashboard data', [
+                'user_type' => $user->user_type ?? 'N/A',
+                'error' => $e->getMessage(),
+            ]);
             return response()->json([
                 'appointments' => [
                     'scheduled' => 0,
@@ -116,7 +119,7 @@ class DashboardController extends Controller
                     'cancelled' => 0,
                     'overview' => [],
                 ],
-                'scheduledAppointments' => [], // Ensure fallback is an array
+                'scheduledAppointments' => [],
             ], 500);
         }
     }

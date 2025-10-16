@@ -34,11 +34,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/owner/api/dentists', [DentistController::class, 'getDentists'])->name('owner.dentists.data');
     Route::put('/dashboard/owner/api/dentists/{dentist_id}', [DentistController::class, 'updateDentist'])->name('owner.dentists.update');
-
-    Route::prefix('api')->group(function () {
-        Route::post('/appointments/{appointmentId}/cancel', [AppointmentController::class, 'cancel'])->name('appointment.cancel');
-        Route::put('/appointments/{appointmentId}', [AppointmentController::class, 'reschedule'])->name('appointment.reschedule');
-    });
 });
 
 Route::get('/appointment', function () {

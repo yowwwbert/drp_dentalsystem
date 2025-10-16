@@ -27,4 +27,9 @@ class Dentist extends Model
     {
         return $this->belongsToMany(Branches::class, 'user_branch', 'user_id', 'branch_id');
     }
+
+    public function diagnosedBy()
+    {
+        return $this->belongsTo(Dentist::class, 'diagnosed_by', 'dentist_id');
+    }
 }

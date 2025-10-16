@@ -14,8 +14,12 @@ return new class extends Migration
         Schema::create('tooth_surfaces', function (Blueprint $table) {
             $table->string('surface_id', 50)->primary();
             $table->string('tooth_id', 50);
-            $table->enum('surface_type', ['Mesial', 'Distal', 'Buccal', 'Lingual', 'Occlusal']);
+            $table->enum('surface_type', ['Mesial','Distal','Labial','Buccal','Lingual','Palatal','Occlusal','Incisal']);
             $table->string('surface_status', 50)->nullable();
+            $table->enum('status_type', ['treated_here', 'pre_existing', 'observed'])
+                ->default('observed');
+            $table->string('diagnosed_by')->nullable();
+            
             $table->string('created_by', 50)->nullable();
             $table->string('updated_by', 50)->nullable();
             $table->text('surface_notes')->nullable();
@@ -36,6 +40,10 @@ return new class extends Migration
                 ->references('user_id')     
                 ->on('users')
                 ->onDelete('set null'); 
+            $table->foreign('diagnosed_by')
+                ->references('dentist_id')
+                ->on('dentists')
+                ->onDelete('set null');
             
             $table->timestamps();
         });

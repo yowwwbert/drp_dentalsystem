@@ -19,6 +19,14 @@ return new class extends Migration
             $table->string('tooth_status', 50)->nullable()->comment('Status of the tooth');
             $table->string('created_by', 50)->nullable()->comment('ID of the user who created the tooth record');
             $table->string('updated_by', 50)->nullable()->comment('ID of the user who last updated the tooth record');
+            $table->enum('status_type', ['treated_here', 'pre_existing', 'observed'])
+                ->default('observed');
+            $table->string('diagnosed_by')->nullable();
+
+            $table->foreign('diagnosed_by')
+                  ->references('dentist_id')
+                  ->on('dentists')
+                  ->onDelete('set null');
             
             
             $table->foreign('tooth_status')

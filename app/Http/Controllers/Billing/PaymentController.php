@@ -18,73 +18,83 @@ class PaymentController extends Controller
     /**
      * Display a listing of the payments.
      */
-    public function index(): JsonResponse
-    {
-        try {
-            $payments = Payment::with([
-                'appointment' => function ($query) {
-                    $query->select('appointment_id', 'patient_id', 'schedule_id', 'status')
-                          ->with(['schedule' => function ($subQuery) {
-                              $subQuery->select('schedule_id', 'schedule_date', 'start_time');
-                          }]);
-                },
-                'patient' => function ($query) {
-                    $query->select('patients.patient_id')
-                          ->join('users', 'patients.patient_id', '=', 'users.user_id')
-                          ->addSelect('users.first_name', 'users.last_name');
-                },
-                'paymentMethod' => function ($query) {
-                    $query->select('payment_method_id', 'payment_method_name');
-                },
-                'handledByUser' => function ($query) {
-                    $query->select('user_id', 'first_name', 'last_name');
-                },
-                'billing' => function ($query) {
-                    $query->select('billing_id', 'patient_id', 'amount', 'billing_date', 'status');
-                }
-            ])->get();
+    public function index(Request $request): JsonResponse
+{
+    try {
+        // Initialize the query with relationships
+        $query = Payment::with([
+            'appointment' => function ($query) {
+                $query->select('appointment_id', 'patient_id', 'schedule_id', 'status')
+                      ->with(['schedule' => function ($subQuery) {
+                          $subQuery->select('schedule_id', 'schedule_date', 'start_time');
+                      }]);
+            },
+            'patient' => function ($query) {
+                $query->select('patients.patient_id')
+                      ->join('users', 'patients.patient_id', '=', 'users.user_id')
+                      ->addSelect('users.first_name', 'users.last_name');
+            },
+            'paymentMethod' => function ($query) {
+                $query->select('payment_method_id', 'payment_method_name');
+            },
+            'handledByUser' => function ($query) {
+                $query->select('user_id', 'first_name', 'last_name');
+            },
+            'billing' => function ($query) {
+                $query->select('billing_id', 'patient_id', 'amount', 'billing_date', 'status');
+            }
+        ]);
 
-            $data = $payments->map(function ($payment) {
-                return [
-                    'payment_id' => $payment->payment_id,
-                    'billing_id' => $payment->billing_id,
-                    'appointment_id' => $payment->appointment_id,
-                    'patient_id' => $payment->patient_id,
+        // Apply patient_id filter if provided in the request
+        if ($request->has('patient_id') && !empty($request->query('patient_id'))) {
+            $query->where('patient_id', $request->query('patient_id'));
+        }
+
+        // Execute the query
+        $payments = $query->get();
+
+        // Transform the data
+        $data = $payments->map(function ($payment) {
+            return [
+                'payment_id' => $payment->payment_id,
+                'billing_id' => $payment->billing_id,
+                'appointment_id' => $payment->appointment_id,
+                'patient_id' => $payment->patient_id,
+                'patient_name' => $payment->patient 
+                    ? ($payment->patient->last_name . ', ' . $payment->patient->first_name)
+                    : 'N/A',
+                'payment_method_id' => $payment->payment_method_id,
+                'payment_method_name' => $payment->paymentMethod ? $payment->paymentMethod->payment_method_name : 'N/A',
+                'amount' => $payment->amount,
+                'payment_date' => $payment->payment_date->toDateString(),
+                'status' => $payment->status,
+                'payment_type' => $payment->payment_type,
+                'notes' => $payment->notes,
+                'handled_by' => $payment->handledByUser ? ($payment->handledByUser->last_name . ', ' . $payment->handledByUser->first_name) : 'N/A',
+                'appointment_details' => $payment->appointment && $payment->appointment->schedule ? [
+                    'appointment_id' => $payment->appointment->appointment_id,
+                    'schedule_date' => $payment->appointment->schedule->schedule_date,
+                    'start_time' => $payment->appointment->schedule->start_time,
+                    'services' => $payment->appointment->treatments->pluck('treatment_name')->toArray(),
+                    'status' => $payment->appointment->status,
                     'patient_name' => $payment->patient 
                         ? ($payment->patient->last_name . ', ' . $payment->patient->first_name)
                         : 'N/A',
-                    'payment_method_id' => $payment->payment_method_id,
-                    'payment_method_name' => $payment->paymentMethod ? $payment->paymentMethod->payment_method_name : 'N/A',
-                    'amount' => $payment->amount,
-                    'payment_date' => $payment->payment_date->toDateString(),
-                    'status' => $payment->status,
-                    'payment_type' => $payment->payment_type,
-                    'notes' => $payment->notes,
-                    'handled_by' => $payment->handledByUser->last_name . ', ' . $payment->handledByUser->first_name, // Return raw user_id
-                    'appointment_details' => $payment->appointment && $payment->appointment->schedule ? [
-                            'appointment_id' => $payment->appointment->appointment_id,
-                        'schedule_date' => $payment->appointment->schedule->schedule_date,
-                        'start_time' => $payment->appointment->schedule->start_time,
-                        'services' => $payment->appointment->treatments->pluck('treatment_name')->toArray(),
-                        'status' => $payment->appointment->status,
-                        'patient_name' => $payment->patient 
-                            ? ($payment->patient->last_name . ', ' . $payment->patient->first_name)
-                            : 'N/A',
-                    ] : null,
-                ];
-            });
+                ] : null,
+            ];
+        });
 
-            return response()->json([
-                'data' => $data,
-                'total_records' => $payments->count(),
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Error fetching payments: ' . $e->getMessage());
-            return response()->json([
-                'error' => 'Failed to fetch payments: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'data' => $data,
+            'total_records' => $payments->count(),
+        ], 200);
+    } catch (\Exception $e) {
+        Log::error('Error fetching payments: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Failed to fetch payments: ' . $e->getMessage(),
+        ], 500);
     }
+}
 
     /**
      * Store a newly created payment and decrement patient balance if completed.

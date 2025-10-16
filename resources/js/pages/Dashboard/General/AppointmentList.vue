@@ -4,25 +4,50 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { Calendar, X, User, CalendarDays, Clock, MapPin, Stethoscope, Activity, ClipboardList, FileText, CalendarPlus, RefreshCw, UserCheck } from 'lucide-vue-next';
 
 interface Appointment {
   appointment_id: string;
   patient_id: string;
   patient_first_name: string;
   patient_last_name: string;
+  patient_email: string;
+  patient_phone: string;
+  balance: number;
+  dentist_id: string;
+  dentist_first_name: string;
+  dentist_last_name: string;
+  dentist_email: string;
+  branch_id: string;
+  branch_name: string;
+  branch_address: string;
+  schedule_id: string;
   date: string;
   start_time: string;
   end_time: string;
-  branch: string;
-  branch_id: string;
   services: string[];
-  dentist: string;
-  dentist_id: string;
   status: string;
-  notes?: string;
-  balance?: number;
+  reschedule_count: number;
+  status_changed_by: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    user_type: string;
+  };
+  reason_for_status_change: string;
+  billing_id: string | null;
+  notes: string;
   created_at: string;
   updated_at: string;
+  created_by: string;
+  updated_by: string;
+  treatments: {
+    treatment_id: string;
+    treatment_name: string;
+    description: string;
+    cost: number;
+    duration: string;
+  }[];
 }
 
 interface User {
@@ -56,13 +81,20 @@ const userBranchId = computed(() => user.value?.branch_id || null);
 const isPatient = computed(() => userType.value === 'Patient');
 
 onMounted(async () => {
+  // Extract status from URL query
+  const url = new URL(window.location.href);
+  const statusParam = url.searchParams.get('status');
+  if (statusParam && statusOptions.includes(statusParam)) {
+    selectedStatus.value = statusParam;
+  }
+
   try {
     const params: Record<string, string> = {};
     if (userType.value === 'Patient') {
       params.patient_id = userId.value;
     } else if (userType.value === 'Dentist') {
       params.dentist_id = userId.value;
-    } else if (userType.value === 'Receptionist' && userBranchId.value) {
+    } else if (userType.value === 'Staff' && userBranchId.value) {
       params.branch_id = userBranchId.value;
     }
 
@@ -109,6 +141,19 @@ const formatDateTime = (dateTime: string): string =>
 
 const getPatientFullName = (appointment: Appointment): string => {
   return `${appointment.patient_first_name} ${appointment.patient_last_name}`;
+};
+
+const getStatusChangedByFullName = (appointment: Appointment): string => {
+  return `${appointment.status_changed_by.first_name} ${appointment.status_changed_by.last_name} (${appointment.status_changed_by.user_type})`;
+};
+
+const getReasonLabel = (appointment: Appointment): string => {
+  if (appointment.status === 'Cancelled') {
+    return 'Reason for Cancellation';
+  } else if (appointment.reschedule_count > 0) {
+    return 'Reason for Reschedule';
+  }
+  return 'Reason for Status Change';
 };
 
 // Filtering & Pagination
@@ -243,16 +288,15 @@ const getStatusColor = (status: string) => {
         <div class="overflow-x-auto">
           <table class="min-w-full bg-white rounded-lg shadow overflow-hidden">
             <thead>
-              <tr class="bg-[#1e4f4f] text-white">
-                <th class="px-4 py-2 text-left">{{ isPatient ? 'Schedule' : 'Patient' }}</th>
-                <th class="px-4 py-2 text-left">{{ isPatient ? 'Dentist' : 'Schedule' }}</th>
-                <th class="px-4 py-2 text-left">{{ isPatient ? 'Branch' : 'Dentist' }}</th>
-                <th class="px-4 py-2 text-left">{{ isPatient ? 'Services' : 'Branch' }}</th>
-                <th v-if="!isPatient" class="px-4 py-2 text-left">Services</th>
-                <th class="px-4 py-2 text-left">Status</th>
-                <th class="px-4 py-2 text-left">Actions</th>
-              </tr>
-            </thead>
+  <tr class="bg-[#1e4f4f] text-white">
+    <th class="px-4 py-2 text-left">{{ isPatient ? 'Schedule' : 'Patient' }}</th>
+    <th class="px-4 py-2 text-left">{{ isPatient ? 'Dentist' : 'Schedule' }}</th>
+    <th class="px-4 py-2 text-left">{{ isPatient ? 'Branch' : 'Dentist' }}</th>
+    <th class="px-4 py-2 text-left">{{ isPatient ? 'Status' : 'Branch' }}</th>
+    <th class="px-4 py-2 text-left">{{ isPatient ? 'Actions' : 'Status' }}</th>
+    <th v-if="!isPatient" class="px-4 py-2 text-left">Actions</th>
+  </tr>
+</thead>
             <tbody>
               <tr v-if="paginatedAppointments.length === 0">
                 <td :colspan="isPatient ? 6 : 7" class="text-center py-8 text-gray-500 text-lg">
@@ -277,7 +321,7 @@ const getStatusColor = (status: string) => {
                   </div>
                 </td>
                 <td class="px-4 py-2">
-                  <div v-if="isPatient">{{ appointment.dentist }}</div>
+                  <div v-if="isPatient">{{ appointment.dentist_last_name }}, {{ appointment.dentist_first_name }}</div>
                   <div v-if="!isPatient">
                     <div class="font-medium text-darkGreen-900">{{ formatDate(appointment.date) }}</div>
                     <div class="text-sm text-gray-500">
@@ -286,14 +330,13 @@ const getStatusColor = (status: string) => {
                   </div>
                 </td>
                 <td class="px-4 py-2">
-                  <div v-if="isPatient">{{ appointment.branch }}</div>
-                  <div v-if="!isPatient">{{ appointment.dentist }}</div>
+                  <div v-if="isPatient">{{ appointment.branch_name }}</div>
+                  <div v-if="!isPatient">{{ appointment.dentist_last_name }}, {{ appointment.dentist_first_name }}</div>
                 </td>
                 <td class="px-4 py-2">
                   <div v-if="isPatient">{{ appointment.services.join(', ') }}</div>
-                  <div v-if="!isPatient">{{ appointment.branch }}</div>
+                  <div v-if="!isPatient">{{ appointment.branch_name }}</div>
                 </td>
-                <td v-if="!isPatient" class="px-4 py-2">{{ appointment.services.join(', ') }}</td>
                 <td class="px-4 py-2">
                   <span
                     :class="`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`"
@@ -345,69 +388,174 @@ const getStatusColor = (status: string) => {
       <div
         v-if="showViewModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
+        @click.self="closeViewModal"
       >
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold text-gray-900">Appointment Details</h2>
-            <button @click="closeViewModal" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">
-              &times;
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+          <!-- Header -->
+          <div class="bg-[#1e4f4f] text-white px-6 py-5 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <Calendar class="w-6 h-6" />
+              <h2 class="text-xl font-bold">Appointment Details</h2>
+            </div>
+            <button 
+              @click="closeViewModal" 
+              class="text-white/80 hover:text-white hover:bg-white/10 rounded-full p-1 transition-all duration-200"
+            >
+              <X class="w-6 h-6" />
             </button>
           </div>
-          <div v-if="viewAppointment" class="space-y-4">
-            <div v-if="!isPatient">
-              <label class="block text-sm font-medium text-gray-700">Patient</label>
-              <p class="text-gray-900">{{ getPatientFullName(viewAppointment) }}</p>
+
+          <!-- Content -->
+          <div v-if="viewAppointment" class="overflow-y-auto p-6 space-y-6">
+            <!-- Patient Info (if not patient) -->
+            <div v-if="!isPatient" class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-start gap-2">
+                <User class="w-4 h-4 text-gray-600 mt-0.5" />
+                <div>
+                  <label class="text-sm font-medium text-gray-600">Patient</label>
+                  <p class="text-gray-900 font-medium">{{ getPatientFullName(viewAppointment) }}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Date</label>
-              <p class="text-gray-900">{{ formatDate(viewAppointment.date) }}</p>
+
+            <!-- Main Grid -->
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Date -->
+              <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-2 mb-2">
+                  <CalendarDays class="w-4 h-4 text-gray-600" />
+                  <label class="text-sm font-medium text-gray-600">Date</label>
+                </div>
+                <p class="text-gray-900 font-medium">{{ formatDate(viewAppointment.date) }}</p>
+              </div>
+              
+              <!-- Time -->
+              <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-2 mb-2">
+                  <Clock class="w-4 h-4 text-gray-600" />
+                  <label class="text-sm font-medium text-gray-600">Time</label>
+                </div>
+                <p class="text-gray-900 font-medium">
+                  {{ formatTime(viewAppointment.start_time) }} - {{ formatTime(viewAppointment.end_time) }}
+                </p>
+              </div>
+
+              <!-- Branch -->
+              <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-2 mb-2">
+                  <MapPin class="w-4 h-4 text-gray-600" />
+                  <label class="text-sm font-medium text-gray-600">Branch</label>
+                </div>
+                <p class="text-gray-900 font-medium">{{ viewAppointment.branch_name }}</p>
+              </div>
+
+              <!-- Dentist -->
+              <div class="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors">
+                <div class="flex items-center gap-2 mb-2">
+                  <Stethoscope class="w-4 h-4 text-gray-600" />
+                  <label class="text-sm font-medium text-gray-600">Dentist</label>
+                </div>
+                <p class="text-gray-900 font-medium">{{ viewAppointment.dentist_last_name }}, {{ viewAppointment.dentist_first_name }}</p>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Time</label>
-              <p class="text-gray-900">
-                {{ formatTime(viewAppointment.start_time) }} - {{ formatTime(viewAppointment.end_time) }}
-              </p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Branch</label>
-              <p class="text-gray-900">{{ viewAppointment.branch }}</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Dentist</label>
-              <p class="text-gray-900">{{ viewAppointment.dentist }}</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Services</label>
-              <p class="text-gray-900">{{ viewAppointment.services.join(', ') }}</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Status</label>
+
+            <!-- Status -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <Activity class="w-4 h-4 text-gray-600" />
+                <label class="text-sm font-medium text-gray-600">Status</label>
+              </div>
               <span
-                :class="`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(viewAppointment.status)}`"
+                :class="`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(viewAppointment.status)}`"
               >
+                <div class="w-2 h-2 rounded-full bg-current"></div>
                 {{ viewAppointment.status }}
               </span>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Booked At</label>
-              <p class="text-gray-900">{{ formatDateTime(viewAppointment.created_at) }}</p>
+
+            <!-- Reschedule Count -->
+            
+            <!-- Status Changed By -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <UserCheck class="w-4 h-4 text-gray-600" />
+                <label class="text-sm font-medium text-gray-600">Status Changed By</label>
+              </div>
+              <p class="text-gray-900 font-medium">{{ getStatusChangedByFullName(viewAppointment) }}</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Last Updated</label>
-              <p class="text-gray-900">{{ formatDateTime(viewAppointment.updated_at) }}</p>
+
+            <!-- Reason for Status Change -->
+            <div v-if="viewAppointment.reason_for_status_change !== 'N/A'" class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <FileText class="w-4 h-4 text-gray-600" />
+                <label class="text-sm font-medium text-gray-600">{{ getReasonLabel(viewAppointment) }}</label>
+              </div>
+              <p class="text-gray-900 font-medium">{{ viewAppointment.reason_for_status_change }}</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Notes</label>
-              <p class="text-gray-900">{{ viewAppointment.notes || 'N/A' }}</p>
+
+            <div v-if="viewAppointment.reschedule_count > 0" class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <RefreshCw class="w-4 h-4 text-gray-600" />
+                <label class="text-sm font-medium text-gray-600">Reschedule Count</label>
+              </div>
+              <p class="text-gray-900 font-medium">{{ viewAppointment.reschedule_count }}</p>
             </div>
-            <div class="flex justify-end pt-4">
-              <button
-                @click="closeViewModal"
-                class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition-colors duration-200"
-              >
-                Close
-              </button>
+
+
+            <!-- Services -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <ClipboardList class="w-4 h-4 text-gray-600" />
+                <label class="text-sm font-medium text-gray-600">Services</label>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span 
+                  v-for="service in viewAppointment.services" 
+                  :key="service"
+                  class="bg-white px-3 py-1.5 rounded-full text-sm text-gray-700 border border-gray-200"
+                >
+                  {{ service }}
+                </span>
+              </div>
             </div>
+
+            <!-- Notes -->
+            <div v-if="viewAppointment.notes && viewAppointment.notes !== 'N/A'" class="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <FileText class="w-4 h-4 text-amber-700" />
+                <label class="text-sm font-medium text-amber-900">Notes</label>
+              </div>
+              <p class="text-gray-700 leading-relaxed">{{ viewAppointment.notes }}</p>
+            </div>
+
+            <!-- Timestamps -->
+            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div class="flex items-start gap-2">
+                <CalendarPlus class="w-4 h-4 text-gray-400 mt-0.5" />
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-0.5">Booked At</label>
+                  <p class="text-sm text-gray-700">{{ formatDateTime(viewAppointment.created_at) }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-2">
+                <RefreshCw class="w-4 h-4 text-gray-400 mt-0.5" />
+                <div>
+                  <label class="block text-xs font-medium text-gray-500 mb-0.5">Last Updated</label>
+                  <p class="text-sm text-gray-700">{{ formatDateTime(viewAppointment.updated_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-200">
+            <button
+              @click="closeViewModal"
+              class="bg-gray-600 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium shadow-sm hover:shadow"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>

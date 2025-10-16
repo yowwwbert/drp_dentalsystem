@@ -8,6 +8,7 @@ use App\Models\PatientDetails\MedicalInformation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
+use App\Models\Clinic\Schedule; 
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -46,8 +47,12 @@ class PatientMedicalInfoController extends Controller
         $patient = Patient::where('patient_id', $userId)->firstOrFail();
         $userModel = $patient->user; // Ensure Patient model has belongsTo(User::class, 'patient_id', 'user_id')
 
+        // Retrieve pending appointment from session
+        $pendingAppointment = $request->session()->get('pending_appointment');
+
         Log::info('Storing medical information for patient:', [
             'patient_id' => $patient->patient_id,
+            'pending_appointment' => $pendingAppointment ?? 'None',
         ]);
 
         MedicalInformation::create([
@@ -65,12 +70,36 @@ class PatientMedicalInfoController extends Controller
 
         Auth::login($userModel);
 
-        Session::forget('url.intended');
+        // Preserve pending_appointment in session
+        if ($pendingAppointment) {
+            $request->session()->put('pending_appointment', $pendingAppointment);
+            Log::info('Preserved pending appointment in session after medical information:', [
+                'pending_appointment' => $pendingAppointment,
+            ]);
+        }
+
+        // Do not clear url.intended to preserve intended redirect, if any
+        // Session::forget('url.intended');
+
+        // Prepare appointment data for verification step using pending_appointment
+        $appointmentData = $pendingAppointment ? [
+            'branch_id' => $pendingAppointment['branch_id'],
+                'branch_name' => $pendingAppointment['branch_name'],
+                'dentist_id' => $pendingAppointment['dentist_id'],
+                'dentist_name' => $pendingAppointment['dentist_name'],
+                'schedule_id' => $pendingAppointment['schedule_id'],
+                'schedule_time' => Schedule::where('schedule_id', $pendingAppointment['schedule_id'])->value('start_time'),
+                'schedule_date' => Schedule::where('schedule_id', $pendingAppointment['schedule_id'])->value('schedule_date'),
+                'treatment_ids' => $pendingAppointment['treatment_ids'] ?? [],
+                'treatment_names' => $pendingAppointment['treatment_names'] ?? [],
+        ] : null;
+
         return redirect()->route(
             $userModel && $userModel->email_address ? 'verification.notice' : 'phone.verify'
         )->with([
             'has_email' => !empty($userModel->email_address),
             'has_phone' => !empty($userModel->phone_number),
+            'appointment' => $appointmentData,
         ])->with('success', 'Medical information saved. Please verify your account.');
     }
 }

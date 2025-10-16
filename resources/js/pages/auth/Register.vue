@@ -6,19 +6,40 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { Eye, EyeOff } from 'lucide-vue-next';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { route } from 'ziggy-js';
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
+import { router } from '@inertiajs/vue3';
 
 interface Branch {
     branch_id: string;
     name: string;
 }
 
+interface Props {
+    user_type?: string;
+    pending_appointment?: {
+        branch_id: string;
+        branch_name: string;
+        dentist_id: string;
+        dentist_name: string;
+        schedule_id: string;
+        treatment_ids: string[];
+        treatment_names: string[];
+    };
+}
+
+const props = defineProps<Props>();
+
 const branches = ref<Branch[]>([]);
 const isLoadingBranches = ref(false);
+
+// Initialize user_type based on prop, default to 'Patient'
+const initialUserType = props.user_type && ['Dentist', 'Staff'].includes(props.user_type) 
+    ? props.user_type 
+    : 'Patient';
 
 const form = useForm({
     first_name: '',
@@ -29,15 +50,15 @@ const form = useForm({
     birth_date: '',
     religion: '',
     sex: '',
-    occupation: '',
+    occupation: initialUserType === 'Patient' ? '' : initialUserType,
     email_address: '',
     phone_number: '',
     address: '',
-    user_type: 'Patient',
+    user_type: initialUserType,
     status: 'Active',
     valid_id: null,
     password: '',
-    branch_id: '',
+    branch_id: props.pending_appointment?.branch_id || '',
     password_confirmation: '',
     guardian_first_name: '',
     guardian_last_name: '',
@@ -48,20 +69,22 @@ const form = useForm({
     contact_information: '',
 });
 
-// Fetch branches on mount
+// Fetch branches for Dentist/Staff
 onMounted(async () => {
-    isLoadingBranches.value = true;
-    try {
-        const response = await axios.get(route('appointment.branches'));
-        branches.value = response.data.map((branch: any) => ({
-            branch_id: String(branch.branch_id),
-            name: branch.branch_name,
-        }));
-    } catch (error) {
-        console.error('Error fetching branches:', error);
-        branches.value = [];
-    } finally {
-        isLoadingBranches.value = false;
+    if (form.user_type === 'Dentist' || form.user_type === 'Staff') {
+        isLoadingBranches.value = true;
+        try {
+            const response = await axios.get(route('appointment.branches'));
+            branches.value = response.data.map((branch: any) => ({
+                branch_id: String(branch.branch_id),
+                name: branch.branch_name,
+            }));
+        } catch (error) {
+            console.error('Error fetching branches:', error);
+            branches.value = [];
+        } finally {
+            isLoadingBranches.value = false;
+        }
     }
 });
 
@@ -84,7 +107,7 @@ const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isPasswordFocused = ref(false);
 
-// Reset valid_id, guardian fields, and branch_id for non-Patient users
+// Reset fields for non-Patient users
 watch(() => form.user_type, (newValue) => {
     if (newValue !== 'Patient') {
         form.valid_id = null;
@@ -94,11 +117,12 @@ watch(() => form.user_type, (newValue) => {
         form.guardian_phone_number = '';
         form.guardian_email_address = '';
         form.guardian_valid_id = null;
+        form.occupation = newValue; // Set occupation to user_type for Dentist/Staff
         form.branch_id = '';
     } else {
-        form.branch_id = '';
+        form.occupation = '';
+        form.branch_id = props.pending_appointment?.branch_id || '';
     }
-    userOccupation();
 });
 
 function computeAge() {
@@ -114,10 +138,6 @@ function computeAge() {
         age--;
     }
     form.age = age.toString();
-}
-
-function userOccupation() {
-    form.occupation = form.user_type === 'Patient' ? form.occupation : form.user_type;
 }
 
 function userContactInformation() {
@@ -149,12 +169,17 @@ watch(() => form.password, (newPassword) => {
 
 const submit = () => {
     computeAge();
-    userOccupation();
     if (!userContactInformation()) {
         return;
     }
     if (form.user_type !== 'Patient') {
         form.valid_id = null;
+        form.guardian_first_name = '';
+        form.guardian_last_name = '';
+        form.guardian_relationship = '';
+        form.guardian_phone_number = '';
+        form.guardian_email_address = '';
+        form.guardian_valid_id = null;
     }
     if ((form.user_type === 'Dentist' || form.user_type === 'Staff') && !form.branch_id) {
         form.errors.branch_id = 'Please select a branch.';
@@ -162,9 +187,31 @@ const submit = () => {
     }
     console.log('Submitting form with data:', form.data());
 
-    form.post(route('register'), {
+    // Submit to appropriate route based on user_type
+    const targetRoute = form.user_type === 'Patient' ? 'register' : 'owner.register-staff';
+
+    form.post(route(targetRoute), {
+        preserveState: true,
+        preserveScroll: true,
+        forceFormData: true, // Ensure file uploads are handled correctly
+        onSuccess: () => {
+            console.log('Form submission successful, redirecting...');
+            if (form.user_type === 'Patient') {
+                router.visit(route('medical-information'), {
+                    method: 'get',
+                    onSuccess: () => {
+                        console.log('Navigated to medical-information');
+                    },
+                    onError: (errors) => {
+                        console.error('Error navigating to medical-information:', errors);
+                    }
+                });
+            } else {
+                // Reset password fields for staff registration
+                form.reset('password', 'password_confirmation');
+            }
+        },
         onFinish: () => {
-            form.reset('password', 'password_confirmation');
             console.log('Form submission finished', form.errors);
         },
         onError: (errors) => {
@@ -183,19 +230,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <span class="text-red-600 italic text-sm">Fields marked with an asterisk (*) are required.</span>
-                <div class="grid gap-2">
-                    <Label for="user_type">User Type <span class="text-red-600">*</span></Label>
-                    <select id="user_type" v-model="form.user_type" @change="userOccupation"
-                        class="h-10 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        :tabindex="0" required>
-                        <option value="Patient">Patient</option>
-                        <option value="Owner">Owner</option>
-                        <option value="Dentist">Dentist</option>
-                        <option value="Staff">Staff</option>
-                    </select>
-                    <InputError :message="form.errors.user_type" />
-                </div>
-                <div class="grid gap-2" v-if="form.user_type === 'Dentist' || form.user_type === 'Staff'">
+                <div v-if="form.user_type === 'Dentist' || form.user_type === 'Staff'" class="grid gap-2">
                     <Label for="branch_id">Branch <span class="text-red-600">*</span></Label>
                     <select 
                         id="branch_id" 
@@ -205,12 +240,17 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         :disabled="isLoadingBranches"
                         required
                     >
-                        <option value="" disabled selected>Select a branch</option>
+                        <option value="" disabled>Select a branch</option>
                         <option v-for="branch in branches" :key="branch.branch_id" :value="branch.branch_id">{{ branch.name }}</option>
                     </select>
                     <InputError :message="form.errors.branch_id" />
                     <span v-if="isLoadingBranches" class="text-sm text-muted-foreground">Loading branches...</span>
                     <span v-if="!isLoadingBranches && branches.length === 0" class="text-sm text-red-600">No branches available.</span>
+                </div>
+                <div v-if="form.user_type === 'Patient' && props.pending_appointment?.branch_id" class="grid gap-2">
+                    <Label>Selected Branch</Label>
+                    <p class="text-sm">{{ props.pending_appointment.branch_name }}</p>
+                    <input type="hidden" v-model="form.branch_id" />
                 </div>
 
                 <h1>Personal Information</h1>
@@ -284,7 +324,7 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                 <div class="grid gap-2" v-if="form.user_type === 'Patient'">
                     <Label for="occupation">Occupation</Label>
-                    <Input id="occupation" type="text" required :tabindex="8" autocomplete="off"
+                    <Input id="occupation" type="text" :tabindex="8" autocomplete="off"
                         v-model="form.occupation" placeholder="Occupation" />
                     <InputError :message="form.errors.occupation" />
                 </div>
@@ -298,12 +338,12 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
 
                 <div class="grid gap-2" v-if="form.user_type === 'Patient' && !isUnder18">
                     <Label for="valid_id">Valid ID <span class="text-red-600">*</span></Label>
-                    <Input id="valid_id" type="file" required accept="image/*" :tabindex="10"
+                    <Input id="valid_id" type="file" required accept="image/*,application/pdf" :tabindex="10"
                         @change="form.valid_id = $event.target.files[0] || null" />
                     <InputError :message="form.errors.valid_id" />
                 </div>
 
-                <div v-if="isUnder18" class="grid gap-6">
+                <div v-if="isUnder18 && form.user_type === 'Patient'" class="grid gap-6">
                     <div class="grid gap-2">
                         <h1>Guardian Details</h1>
                     </div>
@@ -349,9 +389,9 @@ const isUnder18 = computed(() => Number(form.age) < 18 && form.age !== '');
                         </div>
                     </div>
 
-                    <div class="grid gap-2" v-if="form.user_type === 'Patient'">
-                        <Label for="guardian_valid_id">Valid ID <span class="text-red-600">*</span></Label>
-                        <Input id="guardian_valid_id" type="file" required accept="image/*" :tabindex="16"
+                    <div class="grid gap-2">
+                        <Label for="guardian_valid_id">Guardian Valid ID <span class="text-red-600">*</span></Label>
+                        <Input id="guardian_valid_id" type="file" required accept="image/*,application/pdf" :tabindex="16"
                             @change="form.guardian_valid_id = $event.target.files[0] || null" />
                         <InputError :message="form.errors.guardian_valid_id" />
                     </div>

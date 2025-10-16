@@ -8,6 +8,7 @@ Route::get('/', function () {
     return Inertia::render('home pages/Welcome');
 })->name('home');
 
+
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard/Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -22,6 +23,10 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     Route::get('/records/PatientRecords', function () {
         return Inertia::render('Dashboard/Clinic/PatientRecords');
     })->name('owner.patients');
+
+    Route::get('/records/StaffManagement', function () {
+        return Inertia::render('Dashboard/Clinic/StaffManagement');
+    })->name('owner.staff.management');
 
     Route::get('/billing', function () {
         return Inertia::render('Dashboard/General/Billing');
@@ -58,7 +63,6 @@ Route::prefix('dashboard/owner')->middleware(['auth', 'verified'])->group(functi
     Route::get('/clinic/ToothMarks', function () {
         return Inertia::render('Dashboard/Clinic/ToothMarks');
     })->name('owner.tooth.marks');
-
 });
 
 Route::prefix('dashboard/patient')->middleware(['auth', 'verified'])->group(function () {
@@ -81,34 +85,34 @@ Route::prefix('dashboard/patient')->middleware(['auth', 'verified'])->group(func
 
 Route::prefix('dashboard/dentist')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/appointments/AppointmentList', function () {
-        return Inertia::render('Dashboard/Dentist Dashboard/D_AppointmentList');
+        return Inertia::render('Dashboard/General/AppointmentList');
     })->name('dentist.appointments');
 
-    Route::get('/records/dentalChart', function () {
-        return Inertia::render('Dashboard/Dentist Dashboard/D_dentalChart');
-    })->name('dentist.dentalChart');
-
-    Route::get('/records/UserDetails', function () {
-        return Inertia::render('Dashboard/Dentist Dashboard/D_UserDetails');
-    })->name('dentist.profile');
+    Route::get('/records/PatientRecords', function () {
+        return Inertia::render('Dashboard/Clinic/PatientRecords');
+    })->name('dentist.patients');
 });
 
-Route::prefix('dashboard/receptionist')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix('dashboard/staff')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/appointments/AppointmentList', function () {
-        return Inertia::render('Dashboard/Receptionist Dashboard/R_AppointmentList');
-    })->name('receptionist.appointments');
+        return Inertia::render('Dashboard/General/AppointmentList');
+    })->name('staff.appointments');
 
     Route::get('/records/PatientRecords', function () {
-        return Inertia::render('Dashboard/Receptionist Dashboard/R_PatientRecords');
-    })->name('receptionist.patients');
+        return Inertia::render('Dashboard/Clinic/PatientRecords');
+    })->name('staff.patients');
 
-    Route::get('/billing/Billing', function () {
-        return Inertia::render('Dashboard/Receptionist Dashboard/R_Billing');
-    })->name('receptionist.billing');
+    Route::get('/billing', function () {
+        return Inertia::render('Dashboard/General/Billing');
+    })->name('staff.billing');
 
-    Route::get('/records/UserDetails', function () {
-        return Inertia::render('Dashboard/Receptionist Dashboard/R_UserDetails');
-    })->name('receptionist.profile');
+    Route::get('/billing/payment', function () {
+        return Inertia::render('Dashboard/General/Payment');
+    })->name('staff.payment');
+
+    Route::get('/records/DentistRecords', function () {
+        return Inertia::render('Dashboard/Clinic/DentistRecords');
+    })->name('staff.dentists');
 });
 
 Route::get('branches', function () {

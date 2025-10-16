@@ -149,203 +149,302 @@ onMounted(() => {
 </script>
 
 <template>
-  <Head title="Payment Methods Management" />
+  <Head title="Payment Methods" />
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="flex flex-col gap-4 rounded-xl p-4 bg-gray-50 min-h-screen relative">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-4">
-        <h1 class="text-3xl font-bold text-gray-900">Payment Methods Management</h1>
-        <button
-          @click="openCreateModal"
-          class="bg-darkGreen-900 text-white px-6 py-2 rounded font-semibold shadow hover:bg-darkGreen-800 transition"
-          :disabled="loading"
-        >
-          Add Payment Method
-        </button>
-      </div>
-
-      <!-- Error Message -->
-      <div v-if="errorMessage" class="bg-red-100 text-red-700 p-4 rounded-lg mb-4">
-        {{ errorMessage }}
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="text-center py-8 text-gray-500 text-lg">
-        Loading payment methods...
-      </div>
-
-      <!-- Payment Methods List -->
-      <div v-else class="bg-white rounded-xl shadow p-4">
-        <div v-if="paymentMethods.length === 0" class="text-center py-8 text-gray-500 text-lg">
-          No payment methods found.
-        </div>
-        <div v-else class="grid gap-4">
-          <div v-for="method in paymentMethods" :key="method.payment_method_id" class="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">{{ method.payment_method_name }}</h3>
-              <p class="text-sm text-gray-600">ID: {{ method.payment_method_id }}</p>
-              <p class="text-sm text-gray-600">Type: {{ method.payment_method_type }}</p>
-              <p class="text-sm text-gray-600">Description: {{ method.description || 'N/A' }}</p>
-              <p class="text-sm" :class="method.is_active ? 'text-green-600' : 'text-red-600'">
-                Status: {{ method.is_active ? 'Active' : 'Inactive' }}
-              </p>
-            </div>
-            <button
-              @click="editPaymentMethod(method)"
-              class="bg-darkGreen-900 text-white px-4 py-2 rounded hover:bg-darkGreen-800 transition text-sm"
-              :disabled="loading"
-            >
-              Edit
-            </button>
+    <div class="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors duration-300 rounded-xl mt-2 p-4">
+      <div class="px-4 py-4 mx-auto">
+        <!-- Header Section -->
+        <div class="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" :class="{ 'blur-sm': showCreateModal || showEditModal }">
+          <div>
+            <h1 class="text-4xl font-bold mb-2 text-gray-900 dark:text-white">
+              Payment Methods
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-neutral-400">
+              Manage payment options and configurations
+            </p>
           </div>
+          <button
+            @click="openCreateModal"
+            class="bg-darkGreen-900 hover:bg-darkGreen-800 text-white px-6 py-3.5 rounded-xl font-semibold shadow-lg transition-all duration-200 flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Payment Method
+          </button>
         </div>
-      </div>
 
-      <!-- Create Payment Method Modal -->
-      <div v-if="showCreateModal" class="absolute inset-0 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-          <h2 class="text-xl font-bold text-gray-900 mb-4">Add New Payment Method</h2>
-          <div class="space-y-4">
-            <div v-if="errorMessage" class="bg-red-100 text-red-700 p-2 rounded text-sm">
-              {{ errorMessage }}
+        <!-- Loading State -->
+        <div v-if="loading && paymentMethods.length === 0" class="text-center py-16 text-gray-600 dark:text-neutral-300">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-t-darkGreen-900 border-r-darkGreen-900 border-b-transparent border-l-transparent"></div>
+          <p class="mt-4 text-lg">Loading payment methods...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="errorMessage && paymentMethods.length === 0" class="text-center py-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 rounded-2xl">
+          <p class="text-lg">{{ errorMessage }}</p>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="paymentMethods.length === 0" class="text-center py-20 rounded-2xl bg-white dark:bg-neutral-800 text-gray-500 dark:text-neutral-400" :class="{ 'blur-sm': showCreateModal || showEditModal }">
+          <svg class="w-16 h-16 mx-auto mb-4 text-gray-400 dark:text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <p class="text-xl mb-2">No payment methods found</p>
+          <p class="text-sm">Create your first payment method to get started</p>
+        </div>
+
+        <!-- Cards Grid -->
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" :class="{ 'blur-sm': showCreateModal || showEditModal }">
+          <div
+            v-for="method in paymentMethods"
+            :key="method.payment_method_id"
+            class="group relative rounded-2xl p-6 shadow-lg border bg-white dark:bg-neutral-800 border-gray-100 dark:border-neutral-700 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+          >
+            <!-- Payment Method Name (Primary) -->
+            <div class="mb-4">
+              <h3 class="font-bold text-2xl text-gray-900 dark:text-white line-clamp-2 mb-3">
+                {{ method.payment_method_name }}
+              </h3>
+              
+              <!-- Payment Method Details (Secondary) -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-semibold text-gray-500 dark:text-neutral-500">Type:</span>
+                  <span class="text-sm font-medium text-gray-700 dark:text-neutral-300">
+                    {{ method.payment_method_type }}
+                  </span>
+                </div>
+                
+                <div v-if="method.description" class="text-sm text-gray-600 dark:text-neutral-400 line-clamp-2">
+                  {{ method.description }}
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <span 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    :class="method.is_active 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'"
+                  >
+                    {{ method.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                v-model="paymentMethodForm.payment_method_name"
-                type="text"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                placeholder="e.g., Credit Card"
-                :disabled="loading"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                v-model="paymentMethodForm.payment_method_type"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                :disabled="loading"
+
+            <!-- Actions -->
+            <div class="pt-4 border-t border-gray-100 dark:border-neutral-700">
+              <button
+                @click="editPaymentMethod(method)"
+                class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium bg-darkGreen-900 hover:bg-darkGreen-800 text-white transition-all duration-200"
               >
-                <option value="">Select a type</option>
-                <option v-for="type in paymentMethodTypes" :key="type.value" :value="type.value">
-                  {{ type.label }}
-                </option>
-              </select>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </button>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                v-model="paymentMethodForm.description"
-                rows="3"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                placeholder="Optional description"
-                :disabled="loading"
-              ></textarea>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Active</label>
-              <input
-                v-model="paymentMethodForm.is_active"
-                type="checkbox"
-                class="h-5 w-5 text-darkGreen-900 focus:ring-darkGreen-900 border-gray-300 rounded"
-                :disabled="loading"
-              />
-            </div>
-          </div>
-          <div class="flex justify-end gap-3 mt-6">
-            <button
-              @click="closeCreateModal"
-              class="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition"
-              :disabled="loading"
-            >
-              Cancel
-            </button>
-            <button
-              @click="createPaymentMethod"
-              class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition"
-              :disabled="loading"
-            >
-              {{ loading ? 'Creating...' : 'Create' }}
-            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Edit Payment Method Modal -->
-      <div v-if="showEditModal" class="absolute inset-0 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-          <h2 class="text-xl font-bold text-gray-900 mb-4">Edit Payment Method</h2>
-          <div class="space-y-4">
-            <div v-if="errorMessage" class="bg-red-100 text-red-700 p-2 rounded text-sm">
-              {{ errorMessage }}
+        <!-- Create Modal -->
+        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div class="w-full max-w-md rounded-2xl shadow-2xl bg-white dark:bg-neutral-800">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-neutral-700">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Create Payment Method</h2>
+                <button
+                  @click="closeCreateModal"
+                  class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Payment Method ID</label>
-              <input
-                v-model="paymentMethodForm.payment_method_id"
-                type="text"
-                readonly
-                class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50"
-              />
+
+            <div class="p-6 space-y-5">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Payment Method Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="paymentMethodForm.payment_method_name"
+                  type="text"
+                  placeholder="e.g., Credit Card"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Type <span class="text-red-500">*</span>
+                </label>
+                <select
+                  v-model="paymentMethodForm.payment_method_type"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                >
+                  <option value="">Select a type</option>
+                  <option v-for="type in paymentMethodTypes" :key="type.value" :value="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Description
+                </label>
+                <textarea
+                  v-model="paymentMethodForm.description"
+                  rows="3"
+                  placeholder="Optional description"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                ></textarea>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="paymentMethodForm.is_active"
+                  type="checkbox"
+                  id="create-is-active"
+                  class="h-5 w-5 text-darkGreen-900 focus:ring-darkGreen-900 border-gray-300 dark:border-neutral-600 rounded cursor-pointer"
+                />
+                <label for="create-is-active" class="text-sm font-semibold text-gray-700 dark:text-neutral-300 cursor-pointer">
+                  Active
+                </label>
+              </div>
+
+              <div v-if="errorMessage" class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
+                {{ errorMessage }}
+              </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                v-model="paymentMethodForm.payment_method_name"
-                type="text"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                placeholder="e.g., Credit Card"
-                :disabled="loading"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                v-model="paymentMethodForm.payment_method_type"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                :disabled="loading"
-              >
-                <option value="">Select a type</option>
-                <option v-for="type in paymentMethodTypes" :key="type.value" :value="type.value">
-                  {{ type.label }}
-                </option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                v-model="paymentMethodForm.description"
-                rows="3"
-                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-darkGreen-900"
-                placeholder="Optional description"
-                :disabled="loading"
-              ></textarea>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Active</label>
-              <input
-                v-model="paymentMethodForm.is_active"
-                type="checkbox"
-                class="h-5 w-5 text-darkGreen-900 focus:ring-darkGreen-900 border-gray-300 rounded"
-                :disabled="loading"
-              />
+
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-neutral-700">
+              <div class="flex justify-end gap-3">
+                <button
+                  @click="closeCreateModal"
+                  class="px-6 py-2.5 rounded-xl font-semibold bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="createPaymentMethod"
+                  :disabled="loading"
+                  class="px-6 py-2.5 rounded-xl font-semibold bg-darkGreen-900 hover:bg-darkGreen-800 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ loading ? 'Creating...' : 'Create' }}
+                </button>
+              </div>
             </div>
           </div>
-          <div class="flex justify-end gap-3 mt-6">
-            <button
-              @click="closeEditModal"
-              class="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition"
-              :disabled="loading"
-            >
-              Cancel
-            </button>
-            <button
-              @click="updatePaymentMethod"
-              class="px-4 py-2 text-white bg-darkGreen-900 rounded hover:bg-darkGreen-800 transition"
-              :disabled="loading"
-            >
-              {{ loading ? 'Saving...' : 'Save Changes' }}
-            </button>
+        </div>
+
+        <!-- Edit Modal -->
+        <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div class="w-full max-w-md rounded-2xl shadow-2xl bg-white dark:bg-neutral-800">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-neutral-700">
+              <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Payment Method</h2>
+                <button
+                  @click="closeEditModal"
+                  class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-6 space-y-5">
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Payment Method ID
+                </label>
+                <input
+                  v-model="paymentMethodForm.payment_method_id"
+                  type="text"
+                  readonly
+                  class="w-full px-4 py-3 rounded-xl border bg-gray-50 dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-neutral-400"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Payment Method Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  v-model="paymentMethodForm.payment_method_name"
+                  type="text"
+                  placeholder="e.g., Credit Card"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Type <span class="text-red-500">*</span>
+                </label>
+                <select
+                  v-model="paymentMethodForm.payment_method_type"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                >
+                  <option value="">Select a type</option>
+                  <option v-for="type in paymentMethodTypes" :key="type.value" :value="type.value">
+                    {{ type.label }}
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                  Description
+                </label>
+                <textarea
+                  v-model="paymentMethodForm.description"
+                  rows="3"
+                  placeholder="Optional description"
+                  class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-750 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-neutral-500 focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                ></textarea>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <input
+                  v-model="paymentMethodForm.is_active"
+                  type="checkbox"
+                  id="edit-is-active"
+                  class="h-5 w-5 text-darkGreen-900 focus:ring-darkGreen-900 border-gray-300 dark:border-neutral-600 rounded cursor-pointer"
+                />
+                <label for="edit-is-active" class="text-sm font-semibold text-gray-700 dark:text-neutral-300 cursor-pointer">
+                  Active
+                </label>
+              </div>
+
+              <div v-if="errorMessage" class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
+                {{ errorMessage }}
+              </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-neutral-700">
+              <div class="flex justify-end gap-3">
+                <button
+                  @click="closeEditModal"
+                  class="px-6 py-2.5 rounded-xl font-semibold bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="updatePaymentMethod"
+                  :disabled="loading"
+                  class="px-6 py-2.5 rounded-xl font-semibold bg-darkGreen-900 hover:bg-darkGreen-800 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ loading ? 'Updating...' : 'Update' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -354,16 +453,26 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .bg-darkGreen-900 {
   background-color: #1e4f4f;
 }
+
+.text-darkGreen-900 {
+  color: #1e4f4f;
+}
+
 .bg-darkGreen-800 {
-  background-color: #1a4545;
+  background-color: #2d5f5c;
 }
-.hover\:bg-darkGreen-800:hover {
-  background-color: #1a4545;
-}
-.focus\:ring-darkGreen-900:focus {
-  --tw-ring-color: #1e4f4f;
+
+.bg-neutral-750 {
+  background-color: #2a2a2a;
 }
 </style>

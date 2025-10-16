@@ -17,6 +17,9 @@ use App\Http\Controllers\Patient\DentalChartController;
 use App\Http\Controllers\Patient\ToothRecordController;
 use App\Http\Controllers\Clinic\ToothMarksController;
 use App\Http\Controllers\Appointment\ManageAppointmentController;
+use App\Http\Controllers\Staff\StaffReceptionistController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Clinic\StaffManagementController;
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
@@ -41,7 +44,18 @@ Route::middleware('auth')->group(function () {
         Route::put('/treatments/{id}', [TreatmentController::class, 'update']);
     });
 
+    Route::get('/dashboard/staff', [StaffReceptionistController::class, 'index'])->name('staff.index');
+    Route::get('/staff', [StaffReceptionistController::class, 'getStaff'])->name('staff.get');
+    Route::post('/dashboard/staff', [StaffReceptionistController::class, 'store'])->name('staff.store');
+    Route::put('/dashboard/staff/{staffId}', [StaffReceptionistController::class, 'update'])->name('staff.update');
+
+    // Staff Management Routes for Branch Reassignment
+    Route::post('/dashboard/staff/branch/assign/{id}', [StaffManagementController::class, 'assignBranch'])->name('staff.branch.assign');
+    Route::get('/dashboard/staff/branch/{id}/history', [StaffManagementController::class, 'getBranchHistory'])->name('staff.branch.history');
+
     Route::get('/pages/Accounts/Owner Dashboard/Own_DentistInformation/{dentist_id?}', [DentistController::class, 'index'])->name('owner.dentist.records');
+    Route::get('/dentists/available', [DentistController::class, 'getAvailableDentists'])
+        ->middleware('auth');
 
     Route::prefix('api')->group(function () {
         // Appointment Management API Routes
@@ -63,11 +77,16 @@ Route::middleware('auth')->group(function () {
         Route::put('/payment-methods/{payment_method_id}', [PaymentMethodController::class, 'update']);
     });
 
-    Route::get('/dental-charts', [DentalChartController::class, 'index'])->name('patient.dental-charts.index');
-    Route::post('/dental-charts', [DentalChartController::class, 'store'])->name('patient.dental-charts.store');
-    Route::get('/dental-charts/without', [DentalChartController::class, 'withoutCharts'])->name('patient.dental-charts.without');
-    Route::get('/dentalChart/{patient_id}', [DentalChartController::class, 'show'])->name('patient.dental.chart');
-    Route::get('/dentalChart/{patient_id}/tooth-records', [DentalChartController::class, 'getToothRecords'])->name('patient.dental.tooth-records');
+    Route::match(['get', 'post'], '/dentalChart', [DentalChartController::class, 'show'])
+        ->name('dental.chart');
+
+    Route::get('/dentalChart/tooth-records', [DentalChartController::class, 'getToothRecords'])
+        ->name('dental.tooth-records');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification_id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+
     Route::get('/tooth/{tooth_id}', [ToothRecordController::class, 'edit'])->name('patient.tooth.edit');
     Route::put('/tooth/{tooth_id}', [ToothRecordController::class, 'update'])->name('patient.tooth.update');
     Route::get('/tooth-marks/data', [ToothMarksController::class, 'index'])->name('tooth-marks.data');

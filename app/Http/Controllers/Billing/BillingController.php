@@ -4,279 +4,196 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Billing\Billings;
-use App\Models\Appointment\Appointment;
-use App\Models\Users\Patient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 
 class BillingController extends Controller
 {
     public function fetchAll(Request $request)
     {
-        Log::info('Fetching all billings', [
-            'user_id' => auth()->user()->id ?? 'N/A',
-            'user_type' => auth()->user()->user_type ?? 'N/A',
-            'request_parameters' => $request->query(),
-        ]);
+        try {
+            Log::info('Fetching all billings', [
+                'user_id' => auth()->id() ?? 'N/A',
+                'user_type' => auth()->user()->user_type ?? 'Unknown',
+                'request_parameters' => $request->all(),
+            ]);
 
-        $query = Billings::query()->with(['patient.user', 'appointments']);
+            $query = Billings::query()->with([
+                'patient.user',
+                'appointments',
+                'billingTreatments.treatment',
+                'billingTreatments.dentist.user',
+            ]);
 
-        $user = auth()->user();
-
-        // Apply user-based filtering
-        if ($user->user_type === 'Patient') {
-            $query->where('patient_id', $user->id);
-            Log::info("Filtering billings for patient_id: {$user->id}");
-        } elseif ($user->user_type === 'Dentist') {
-            $query->whereHas('appointments', function ($q) use ($user) {
-                $q->where('dentist_id', $user->id);
-            });
-            Log::info("Filtering billings for dentist_id: {$user->id}");
-        } elseif ($user->user_type === 'Receptionist' && $user->branch_id) {
-            $query->whereHas('appointments', function ($q) use ($user) {
-                $q->where('branch_id', $user->branch_id);
-            });
-            Log::info("Filtering billings for branch_id: {$user->branch_id}");
-        } elseif ($user->user_type === 'Owner') {
-            Log::info("No filters applied for Owner, fetching all billings");
-        } else {
-            Log::warning("Unauthorized user type: {$user->user_type}");
-            return response()->json(['error' => 'Unauthorized access'], 403);
-        }
-
-        // Apply additional query parameter filters (optional, for flexibility)
-        if ($request->has('patient_id') && !empty($request->query('patient_id')) && $user->user_type === 'Owner') {
-            $patientId = $request->query('patient_id');
-            $query->where('patient_id', $patientId);
-            Log::info("Additional filter applied for patient_id: {$patientId}");
-        }
-
-        $billings = $query->get();
-
-        Log::info('Raw billings data retrieved:', [
-            'total_records' => $billings->count(),
-            'billings' => $billings->toArray(),
-        ]);
-
-        $formattedData = $billings->map(function ($billing) {
-            $user = $billing->patient && $billing->patient->user ? $billing->patient->user : null;
-            $patientName = 'N/A';
-
-            if ($user) {
-                $nameParts = array_filter([
-                    $user->first_name,
-                    $user->middle_name,
-                    $user->last_name,
-                    $user->suffix,
-                ]);
-                $patientName = implode(' ', $nameParts);
+            if (auth()->user()->user_type === 'Patient') {
+                $query->where('patient_id', auth()->id());
+            } elseif (auth()->user()->user_type === 'Dentist') {
+                $query->whereHas('billingTreatments', function ($q) {
+                    $q->where('dentist_id', auth()->id());
+                });
+            } elseif (auth()->user()->user_type === 'Receptionist' && auth()->user()->branch_id) {
+                $query->whereHas('appointments', function ($q) {
+                    $q->where('branch_id', auth()->user()->branch_id);
+                });
+            } else {
+                Log::info('No filters applied for Owner, fetching all billings');
             }
 
-            return [
-                'billing_id'      => $billing->billing_id,
-                'patient_id'      => $billing->patient_id,
-                'patient_name'    => $patientName,
-                'billing_date'    => $billing->billing_date,
-                'amount'          => $billing->amount,
-                'status'          => $billing->status,
-                'procedures'      => $billing->procedures ?? [],
-                'discount_amount' => $billing->discount_amount ?? [],
-                'discount_reason' => $billing->discount_reason ?? [],
-                'appointments'    => $billing->appointments->map(function ($appointment) {
-                    return [
-                        'appointment_id' => $appointment->appointment_id,
-                        'date'           => $appointment->date,
-                        'time'           => $appointment->time,
-                        'services'       => $appointment->services ?? [],
-                        'status'         => $appointment->status,
-                    ];
-                })->toArray(),
-            ];
-        })->toArray();
+            $billings = $query->get();
+            Log::info('Raw billings data retrieved', ['total_records' => $billings->count()]);
 
-        Log::info('Transformed billings data:', [
-            'formatted_data' => $formattedData,
-        ]);
+            $formattedBillings = $billings->map(function ($billing) {
+                return [
+                    'billing_id' => $billing->billing_id,
+                    'patient_id' => $billing->patient_id,
+                    'patient_name' => $billing->patient && $billing->patient->user
+                        ? $billing->patient->user->first_name . ' ' . $billing->patient->user->last_name
+                        : 'Unknown Patient',
+                    'billing_date' => $billing->billing_date,
+                    'amount' => $billing->amount ?? 0,
+                    'status' => $billing->status,
+                    'discount_amount' => $billing->discount_amount ?? 0,
+                    'discount_reason' => $billing->discount_reason ?? '',
+                    'treatments' => $billing->billingTreatments
+                        ? $billing->billingTreatments->map(function ($treatment) {
+                            return [
+                                'billing_treatment_id' => $treatment->billing_treatment_id,
+                                'treatment_id' => $treatment->treatment_id,
+                                'treatment_name' => $treatment->treatment ? $treatment->treatment->name : 'N/A',
+                                'dentist_id' => $treatment->dentist_id,
+                                'dentist_name' => $treatment->dentist && $treatment->dentist->user
+                                    ? $treatment->dentist->user->first_name . ' ' . $treatment->dentist->user->last_name
+                                    : 'N/A',
+                                'description' => $treatment->description ?? 'N/A',
+                                'price' => $treatment->price ?? 0,
+                                'discount_amount' => $treatment->discount_amount ?? 0,
+                                'discount_reason' => $treatment->discount_reason ?? '',
+                                'total' => $treatment->total ?? 0,
+                            ];
+                        })->toArray()
+                        : [],
+                    'appointments' => $billing->appointments
+                        ? $billing->appointments->map(function ($appointment) {
+                            return [
+                                'appointment_id' => $appointment->appointment_id,
+                                'date' => $appointment->date,
+                                'start_time' => $appointment->start_time,
+                                'status' => $appointment->status,
+                                'branch_id' => $appointment->branch_id,
+                                'branch_name' => $appointment->branch ? $appointment->branch->name : 'N/A',
+                                'services' => $appointment->services ?? [],
+                            ];
+                        })->toArray()
+                        : [],
+                ];
+            })->toArray();
 
-        return response()->json([
-            'data'          => $formattedData,
-            'total_records' => count($formattedData),
-        ]);
+            return response()->json([
+                'data' => $formattedBillings,
+                'total_records' => $billings->count(),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching billings: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json(['error' => 'Failed to fetch billings'], 500);
+        }
     }
 
     public function create(Request $request)
     {
-        $user = auth()->user();
-
-        // Restrict Patients from creating billings
-        if ($user->user_type === 'Patient') {
-            Log::warning("Patient attempted to create billing", ['user_id' => $user->id]);
-            return response()->json(['error' => 'Unauthorized: Patients cannot create billings'], 403);
-        }
-
-        $validated = $request->validate([
-            'patient_id' => 'required|string|exists:patients,patient_id',
-            'billing_date' => 'required|date',
-            'amount' => 'required|numeric|min:0',
-            'status' => 'required|in:Pending,Partially Paid,Paid',
-            'procedures' => 'required|array|min:1',
-            'procedures.*.name' => 'required|string',
-            'procedures.*.description' => 'nullable|string',
-            'procedures.*.unit_price' => 'required|numeric|min:0',
-            'procedures.*.total' => 'required|numeric|min:0',
-            'procedures.*.discount_amount' => 'nullable|numeric|min:0',
-            'procedures.*.discount_reason' => 'nullable|string',
-            'discount_amount' => 'nullable|array',
-            'discount_reason' => 'nullable|array',
-            'appointment_ids' => 'required|array|min:1',
-            'appointment_ids.*' => 'required|string|exists:appointments,appointment_id',
-        ]);
-
-        // Verify branch_id for Receptionist and Dentist
-        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
-            $appointments = Appointment::whereIn('appointment_id', $validated['appointment_ids'])->get();
-            foreach ($appointments as $appointment) {
-                if ($appointment->branch_id !== $user->branch_id) {
-                    Log::warning("Unauthorized: Appointment not in user's branch", [
-                        'user_id' => $user->id,
-                        'branch_id' => $user->branch_id,
-                        'appointment_id' => $appointment->appointment_id,
-                    ]);
-                    return response()->json(['error' => 'Unauthorized: Appointment not in your branch'], 403);
-                }
-            }
-        }
-
         try {
-            DB::beginTransaction();
-
-            $validated['billing_id'] = Str::uuid()->toString();
-
-            $billing = Billings::create([
-                'billing_id'      => $validated['billing_id'],
-                'patient_id'      => $validated['patient_id'],
-                'billing_date'    => $validated['billing_date'],
-                'amount'          => $validated['amount'],
-                'status'          => $validated['status'],
-                'procedures'      => $validated['procedures'],
-                'discount_amount' => $validated['discount_amount'],
-                'discount_reason' => $validated['discount_reason'],
+            Log::info('Creating new billing', [
+                'user_id' => auth()->id() ?? 'N/A',
+                'request_data' => $request->all(),
             ]);
+
+            // Validate request
+            $validated = $request->validate([
+                'patient_id' => 'required|exists:patients,patient_id',
+                'billing_date' => 'required|date',
+                'amount' => 'required|numeric|min:0',
+                'status' => 'required|in:Pending,Partially Paid,Paid',
+                'discount_amount' => 'nullable|numeric|min:0',
+                'discount_reason' => 'nullable|string',
+                'treatments' => 'required|array|min:1',
+                'treatments.*.treatment_id' => 'required|exists:treatments,treatment_id',
+                'treatments.*.dentist_id' => 'required|exists:dentists,dentist_id',
+                'treatments.*.description' => 'nullable|string',
+                'treatments.*.price' => 'required|numeric|min:0',
+                'treatments.*.discount_amount' => 'nullable|numeric|min:0',
+                'treatments.*.discount_reason' => 'nullable|string',
+                'treatments.*.total' => 'required|numeric|min:0',
+                'appointment_ids' => 'required|array|min:1',
+                'appointment_ids.*' => 'required|exists:appointments,appointment_id',
+            ]);
+
+            // Start transaction
+            \DB::beginTransaction();
+
+            // Create billing record
+            $billing = Billings::create([
+                'patient_id' => $validated['patient_id'],
+                'billing_date' => $validated['billing_date'],
+                'amount' => $validated['amount'],
+                'status' => $validated['status'],
+                'discount_amount' => $validated['discount_amount'] ?? 0,
+                'discount_reason' => $validated['discount_reason'] ?? null,
+            ]);
+
+            Log::info('Billing record created', ['billing_id' => $billing->billing_id]);
+
+            // Create billing treatments
+            foreach ($validated['treatments'] as $treatment) {
+                $billing->billingTreatments()->create([
+                    'billing_id' => $billing->billing_id, // Use the created billing ID
+                    'treatment_id' => $treatment['treatment_id'],
+                    'dentist_id' => $treatment['dentist_id'],
+                    'description' => $treatment['description'] ?? null, // Include description
+                    'price' => $treatment['price'],
+                    'discount_amount' => $treatment['discount_amount'] ?? 0,
+                    'discount_reason' => $treatment['discount_reason'] ?? null,
+                    'total' => $treatment['total'], // Include total
+                ]);
+            }
+
+            Log::info('Billing treatments created', ['count' => count($validated['treatments'])]);
 
             // Update appointments with billing_id
-            $updated = Appointment::whereIn('appointment_id', $validated['appointment_ids'])
-                ->whereNull('billing_id')
+            \DB::table('appointments')
+                ->whereIn('appointment_id', $validated['appointment_ids'])
                 ->update(['billing_id' => $billing->billing_id]);
 
-            if ($updated === 0) {
-                throw new \Exception('No eligible appointments were updated. All provided appointments may already be linked to a billing.');
-            }
+            Log::info('Appointments updated with billing_id', [
+                'billing_id' => $billing->billing_id,
+                'appointment_ids' => $validated['appointment_ids'],
+            ]);
 
-            $updatedBalance = Patient::where('patient_id', $validated['patient_id'])
-                ->increment('remaining_balance', $validated['amount']);
+            // Commit transaction
+            \DB::commit();
 
-            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Billing created successfully',
+                'billing_id' => $billing->billing_id,
+            ], 201);
 
-            return response()->json(['data' => $billing], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \DB::rollBack();
+            Log::warning('Validation failed for billing creation', ['errors' => $e->errors()]);
+            return response()->json([
+                'error' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+
         } catch (\Exception $e) {
-            DB::rollBack();
+            \DB::rollBack();
             Log::error('Error creating billing: ' . $e->getMessage(), [
-                'request_data' => $request->all(),
-                'exception'    => $e->getTraceAsString(),
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json(['error' => 'Failed to create billing: ' . $e->getMessage()], 422);
-        }
-    }
-
-    public function update(Request $request, $billingId)
-    {
-        $user = auth()->user();
-
-        // Restrict Patients from updating billings
-        if ($user->user_type === 'Patient') {
-            Log::warning("Patient attempted to update billing", ['user_id' => $user->id, 'billing_id' => $billingId]);
-            return response()->json(['error' => 'Unauthorized: Patients cannot update billings'], 403);
-        }
-
-        $billing = Billings::where('billing_id', $billingId)->firstOrFail();
-
-        // Verify branch_id for Receptionist and Dentist
-        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
-            $appointments = $billing->appointments;
-            foreach ($appointments as $appointment) {
-                if ($appointment->branch_id !== $user->branch_id) {
-                    Log::warning("Unauthorized: Billing not in user's branch", [
-                        'user_id' => $user->id,
-                        'branch_id' => $user->branch_id,
-                        'billing_id' => $billingId,
-                    ]);
-                    return response()->json(['error' => 'Unauthorized: Billing not in your branch'], 403);
-                }
-            }
-        }
-
-        $validated = $request->validate([
-            'patient_id' => 'required|string|exists:patients,patient_id',
-            'billing_date' => 'required|date',
-            'amount' => 'required|numeric|min:0',
-            'status' => 'required|in:Pending,Partially Paid,Paid',
-            'procedures' => 'required|array|min:1',
-            'procedures.*.name' => 'required|string',
-            'procedures.*.description' => 'nullable|string',
-            'procedures.*.unit_price' => 'required|numeric|min:0',
-            'procedures.*.total' => 'required|numeric|min:0',
-            'procedures.*.discount_amount' => 'nullable|numeric|min:0',
-            'procedures.*.discount_reason' => 'nullable|string',
-            'discount_amount' => 'nullable|array',
-            'discount_reason' => 'nullable|array',
-            'appointment_ids' => 'required|array|min:1',
-            'appointment_ids.*' => 'required|string|exists:appointments,appointment_id',
-        ]);
-
-        // Verify branch_id for new appointment_ids
-        if (in_array($user->user_type, ['Receptionist', 'Dentist']) && $user->branch_id) {
-            $appointments = Appointment::whereIn('appointment_id', $validated['appointment_ids'])->get();
-            foreach ($appointments as $appointment) {
-                if ($appointment->branch_id !== $user->branch_id) {
-                    Log::warning("Unauthorized: New appointment not in user's branch", [
-                        'user_id' => $user->id,
-                        'branch_id' => $user->branch_id,
-                        'appointment_id' => $appointment->appointment_id,
-                    ]);
-                    return response()->json(['error' => 'Unauthorized: Appointment not in your branch'], 403);
-                }
-            }
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Update patient balance (subtract old amount, add new amount)
-            $oldAmount = $billing->amount;
-            Patient::where('patient_id', $billing->patient_id)
-                ->decrement('remaining_balance', $oldAmount);
-            Patient::where('patient_id', $validated['patient_id'])
-                ->increment('remaining_balance', $validated['amount']);
-
-            $billing->update($validated);
-
-            // Update appointments to point to this billing
-            Appointment::whereIn('appointment_id', $validated['appointment_ids'])
-                ->update(['billing_id' => $billing->billing_id]);
-
-            DB::commit();
-
-            return response()->json(['data' => $billing]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating billing: ' . $e->getMessage(), [
-                'billing_id'   => $billingId,
-                'request_data' => $request->all(),
-                'exception'    => $e->getTraceAsString(),
-            ]);
-            return response()->json(['error' => 'Failed to update billing: ' . $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Failed to create billing',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }

@@ -7,8 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-
-
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use App\Models\Clinic\Branches;
@@ -121,7 +120,7 @@ class User extends Authenticatable
 
         public function patient()
     {
-        return $this->hasOne(Patient::class);
+        return $this->hasOne(Patient::class, 'user_id', 'patient_id');
     }
 
     public function dentist()
@@ -142,7 +141,11 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Branches::class, 'user_branch', 'user_id', 'branch_id', 'user_id', 'branch_id');
     }
-
+    public function statusChangedBy()
+    {
+        return $this->belongsTo(User::class, 'status_changed_by', 'user_id');    
+        
+    }
     public function getEmailForPasswordReset()
 {
     return $this->email_address;

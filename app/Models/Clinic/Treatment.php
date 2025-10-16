@@ -35,4 +35,8 @@ class Treatment extends Model
             }
         });
     }
+
+    public function appointments(){
+        return $this->belongsToMany('App\Models\Appointment\Appointments', 'treatment_id', 'appointment_id');
+    }
 }

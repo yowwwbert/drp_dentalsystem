@@ -47,12 +47,12 @@ interface User {
   first_name: string;
   last_name: string;
   user_type: string;
-  branch: Branch | null; // null if not assigned yet
+  branch: Branch | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: 'Dashboard', href: '/dashboard' },
-  { title: 'Payments Management', href: '/dashboard/owner/billing/Billing/Payments' },
+  { title: 'Payments Management', href: '/dashboard/billing/payments'},
 ];
 
 const searchQuery = ref('');
@@ -64,7 +64,6 @@ const user = computed(() => page.props.auth.user);
 const userFirstName = computed(() => user.value?.first_name || 'User');
 const userPosition = computed(() => user.value?.user_type || 'User');
 const userId = computed(() => user.value?.user_id || '');
-
 const isPatient = computed(() => userPosition.value === 'Patient');
 const canModify = computed(() => !isPatient.value);
 
@@ -83,11 +82,11 @@ const paymentForm = ref({
   patient_id: '',
   payment_method_id: '',
   amount: 0,
-  payment_date: new Date().toISOString().split('T')[0], // Default to today
+  payment_date: new Date().toISOString().split('T')[0],
   status: 'Completed',
   payment_type: 'Full' as 'Partial' | 'Full' | 'Advance',
   notes: '',
-  handled_by: '', // Initialize empty, set in handleCreatePayment/handleEditPayment
+  handled_by: '',
 });
 
 // Billing, Appointments, and Payment Methods data
@@ -98,7 +97,14 @@ const payments = ref<Payment[]>([]);
 
 const fetchPayments = async () => {
   try {
-    const response = await axios.get('/api/payments');
+    let response;
+    if (isPatient.value) {
+      // Fetch payments for the specific patient using patient_id
+      response = await axios.get(`/api/payments?patient_id=${userId.value}`);
+    } else {
+      // Fetch all payments for owner
+      response = await axios.get('/api/payments');
+    }
     payments.value = response.data.data;
   } catch (error) {
     console.error('Error fetching payments:', error);
@@ -120,7 +126,14 @@ const fetchPaymentById = async (paymentId: string) => {
 
 const fetchBillings = async () => {
   try {
-    const response = await axios.get('/api/billings');
+    let response;
+    if (isPatient.value) {
+      // Fetch billings for the specific patient
+      response = await axios.get(`/api/billings?patient_id=${userId.value}`);
+    } else {
+      // Fetch all billings for owner
+      response = await axios.get('/api/billings');
+    }
     billings.value = response.data.data;
   } catch (error) {
     console.error('Error fetching billings:', error);
@@ -226,7 +239,7 @@ const handleCreatePayment = () => {
     status: 'Completed',
     payment_type: 'Full',
     notes: '',
-    handled_by: userId.value, // Set to current user_id
+    handled_by: userId.value,
   };
   billingAppointments.value = [];
   showCreateModal.value = true;
@@ -246,7 +259,7 @@ const handleEditPayment = async (paymentId: string) => {
       status: payment.status,
       payment_type: payment.payment_type,
       notes: payment.notes,
-      handled_by: payment.handled_by, // Retain existing handled_by
+      handled_by: payment.handled_by,
     };
     const selectedBilling = billings.value.find(b => b.billing_id === payment.billing_id);
     billingAppointments.value = selectedBilling ? selectedBilling.appointments || [] : [];
@@ -279,7 +292,6 @@ const showConfirmation = () => {
 const createPayment = async () => {
   try {
     const { payment_id, ...payload } = paymentForm.value;
-    console.log('Creating payment with payload:', { ...payload, handled_by: userId.value }); // Debug
     await axios.post('/api/payments', {
       ...payload,
       handled_by: userId.value,
@@ -295,7 +307,6 @@ const createPayment = async () => {
 const savePayment = async () => {
   try {
     const { payment_id, ...payload } = paymentForm.value;
-    console.log('Updating payment with payload:', { ...payload, handled_by: userId.value }); // Debug
     await axios.put(`/api/payments/${paymentForm.value.payment_id}`, {
       ...payload,
       handled_by: userId.value,
@@ -551,7 +562,7 @@ const selectedBillingDetails = computed(() => {
                 >
                   <option value="">Select an appointment</option>
                   <option v-for="appointment in billingAppointments" :key="appointment.appointment_id" :value="appointment.appointment_id">
-                    {{ appointment.appointment_id }} - {{ appointment.patient_name }} - {{ formatDate(appointment.date) }} {{ appointment.time }}
+                    {{ appointment.appointment_id }}
                   </option>
                 </select>
               </div>

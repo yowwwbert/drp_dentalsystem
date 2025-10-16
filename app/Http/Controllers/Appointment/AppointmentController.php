@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Appointment;
 
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Inertia\Inertia;
 use App\Models\Appointment\Appointment;
 use App\Models\Pivot\AppointmentTreatment;
 use App\Models\Clinic\Schedule;
+use App\Models\Users\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\AppointmentNotification;
 use App\Http\Controllers\Controller;
 
 class AppointmentController extends Controller
@@ -21,61 +25,49 @@ class AppointmentController extends Controller
 
     public function store(Request $request)
     {
-        // Log incoming request data
         Log::info('Received appointment store request:', $request->all());
 
         $validated = $request->validate([
             'branch_id' => 'required|exists:branches,branch_id',
-            'branch_name' => 'sometimes|string', // Added: optional, for display
-            'branch_address' => 'sometimes|string', // Added: optional, if needed
+            'branch_name' => 'sometimes|string',
+            'branch_address' => 'sometimes|string',
             'dentist_id' => 'required|exists:users,user_id',
-            'dentist_name' => 'sometimes|string', // Added: optional, for display
+            'dentist_name' => 'sometimes|string',
             'schedule_id' => 'required|exists:schedules,schedule_id',
+            'start_time' => 'sometimes|string',
+            'end_time' => 'sometimes|string',
+            'schedule_date' => 'sometimes|date',
             'treatment_ids' => 'required|array|min:1',
             'treatment_ids.*' => 'exists:treatments,treatment_id',
-            'treatment_names' => 'sometimes|array|min:1', // Added: optional, for display
-            'treatment_names.*' => 'string', // Validate each treatment name
+            'treatment_names' => 'sometimes|array|min:1',
+            'treatment_names.*' => 'string',
         ]);
 
-        // Log validated data
         Log::info('Validated appointment data before confirmation:', $validated);
 
-        // Save pending appointment in session (now includes branch_name and dentist_name)
         $request->session()->put('pending_appointment', $validated);
 
-        // Log session data
         Log::info('Stored pending appointment in session before confirmation:', [
             'pending_appointment' => $request->session()->get('pending_appointment'),
         ]);
 
-        // If not logged in → redirect to login
         if (!Auth::check()) {
             return redirect()->route('login')
                 ->with('message', 'Please log in or sign up to confirm your appointment.');
         }
 
-        // Fetch schedule details
         $schedule = Schedule::find($validated['schedule_id']);
 
-        // Log data before Inertia render
-        Log::info('Inertia response data for ConfirmAppointment:', [
-            'branch_id' => $validated['branch_id'],
-            'branch_name' => $validated['branch_name'] ?? null,
-            'dentist_id' => $validated['dentist_id'],
-            'dentist_name' => $validated['dentist_name'] ?? null,
-            'schedule' => $schedule ? $schedule->toArray() : null,
-            'treatment_ids' => $validated['treatment_ids'],
-        ]);
-
-        // ✅ Pass appointment data to frontend for confirmation (now includes branch_name and dentist_name)
         return Inertia::render('appointment/ConfirmAppointment', [
             'appointment' => [
                 'branch_id' => $validated['branch_id'],
-                'branch_name' => $validated['branch_name'] ?? null, // Added
-                'branch_address' => $validated['branch_address'] ?? null, // Added, if needed
+                'branch_name' => $validated['branch_name'] ?? null,
+                'branch_address' => $validated['branch_address'] ?? null,
                 'dentist_id' => $validated['dentist_id'],
-                'dentist_name' => $validated['dentist_name'] ?? null, // Added
+                'dentist_name' => $validated['dentist_name'] ?? null,
                 'schedule' => $schedule,
+                'start_time' => Carbon::parse($schedule->start_time, 'Asia/Manila')->format('h:i A'),
+                'end_time' => Carbon::parse($schedule->end_time, 'Asia/Manila')->format('h:i A'),
                 'treatment_ids' => $validated['treatment_ids'],
             ],
         ]);
@@ -83,33 +75,28 @@ class AppointmentController extends Controller
 
     public function confirm(Request $request)
     {
-        // Must be logged in
         if (!Auth::check()) {
             return redirect()->route('login')
                 ->with('error', 'You must be logged in to confirm an appointment.');
         }
 
-        // Must be a patient
         if (Auth::user()->user_type !== 'Patient') {
             return redirect()->route('appointment')
                 ->with('error', 'Only patients can book appointments.');
         }
 
-        // Get pending appointment data
         $pending = $request->session()->get('pending_appointment');
         if (!$pending) {
             return redirect()->route('appointment')
                 ->with('error', 'No appointment data found. Please try again.');
         }
 
-        // Log retrieved pending appointment
         Log::info('Retrieved pending appointment for confirmation:', [
             'pending_appointment' => $pending,
         ]);
 
         try {
             return DB::transaction(function () use ($request, $pending) {
-                // Verify schedule availability
                 $schedule = Schedule::where('schedule_id', $pending['schedule_id'])
                     ->where('is_active', true)
                     ->first();
@@ -119,7 +106,6 @@ class AppointmentController extends Controller
                         ->with('error', 'Selected schedule is no longer available.');
                 }
 
-                // Create appointment
                 $appointment = Appointment::create([
                     'patient_id' => Auth::id(),
                     'dentist_id' => $pending['dentist_id'],
@@ -130,7 +116,6 @@ class AppointmentController extends Controller
                     'appointment_created_by' => Auth::id(),
                 ]);
 
-                // Attach multiple treatments
                 foreach ($pending['treatment_ids'] as $treatmentId) {
                     AppointmentTreatment::create([
                         'appointment_id' => $appointment->appointment_id,
@@ -138,18 +123,101 @@ class AppointmentController extends Controller
                     ]);
                 }
 
-                // Mark schedule as unavailable
                 $schedule->update(['is_active' => false]);
 
-                // Clear session
+                // Notify patient
+                $patient = Auth::user();
+                Log::info('Preparing to send appointment creation notification to patient:', [
+                    'patient_id' => $patient->user_id,
+                    'appointment_id' => $appointment->appointment_id,
+                ]);
+                try {
+                    Notification::send($patient, new AppointmentNotification($appointment, 'created'));
+                    Log::info('Sent appointment creation notification to patient:', [
+                        'patient_id' => $patient->user_id,
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send appointment creation notification to patient:', [
+                        'patient_id' => $patient->user_id,
+                        'appointment_id' => $appointment->appointment_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                // Notify dentist
+                $dentist = User::find($pending['dentist_id']);
+                if ($dentist) {
+                    Log::info('Preparing to send appointment creation notification to dentist:', [
+                        'dentist_id' => $dentist->user_id,
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                    try {
+                        Notification::send($dentist, new AppointmentNotification($appointment, 'created'));
+                        Log::info('Sent appointment creation notification to dentist:', [
+                            'dentist_id' => $dentist->user_id,
+                            'appointment_id' => $appointment->appointment_id,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to send appointment creation notification to dentist:', [
+                            'dentist_id' => $dentist->user_id,
+                            'appointment_id' => $appointment->appointment_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                } else {
+                    Log::warning('Dentist not found for notification:', [
+                        'dentist_id' => $pending['dentist_id'],
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                }
+
+                // Notify staff at the branch
+                try {
+                    $staff = User::where('user_type', 'Staff')
+                        ->join('user_branch', 'users.user_id', '=', 'user_branch.user_id')
+                        ->where('user_branch.branch_id', $pending['branch_id'])
+                        ->get();
+                    Log::info('Staff query executed for confirmation:', [
+                        'branch_id' => $pending['branch_id'],
+                        'staff_count' => $staff->count(),
+                        'staff_ids' => $staff->pluck('user_id')->toArray(),
+                        'appointment_id' => $appointment->appointment_id,
+                    ]);
+                    if ($staff->isNotEmpty()) {
+                        Log::info('Preparing to send appointment creation notifications to staff:', [
+                            'branch_id' => $pending['branch_id'],
+                            'staff_ids' => $staff->pluck('user_id')->toArray(),
+                            'appointment_id' => $appointment->appointment_id,
+                        ]);
+                        Notification::send($staff, new AppointmentNotification($appointment, 'created'));
+                        Log::info('Sent appointment creation notifications to staff:', [
+                            'branch_id' => $pending['branch_id'],
+                            'staff_ids' => $staff->pluck('user_id')->toArray(),
+                            'appointment_id' => $appointment->appointment_id,
+                        ]);
+                    } else {
+                        Log::warning('No staff found for branch for confirmation notification:', [
+                            'branch_id' => $pending['branch_id'],
+                            'appointment_id' => $appointment->appointment_id,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to query or notify staff for confirmation:', [
+                        'branch_id' => $pending['branch_id'],
+                        'appointment_id' => $appointment->appointment_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 $request->session()->forget('pending_appointment');
 
                 Log::info('Appointment created successfully:', [
                     'appointment_id' => $appointment->appointment_id,
                     'branch_id' => $pending['branch_id'],
-                    'branch_name' => $pending['branch_name'] ?? null, // Log the name if available
+                    'branch_name' => $pending['branch_name'] ?? null,
                     'dentist_id' => $pending['dentist_id'],
-                    'dentist_name' => $pending['dentist_name'] ?? null, // Log the name if available
+                    'dentist_name' => $pending['dentist_name'] ?? null,
                     'schedule_id' => $pending['schedule_id'],
                     'treatment_ids' => $pending['treatment_ids'],
                 ]);
@@ -158,16 +226,15 @@ class AppointmentController extends Controller
                     ->with('message', 'Appointment booked successfully!');
             });
         } catch (\Exception $e) {
-            Log::error('Failed to confirm appointment: ' . $e->getMessage());
+            Log::error('Failed to confirm appointment: ' . $e->getMessage(), [
+                'exception' => $e->getTraceAsString(),
+            ]);
 
             return redirect()->route('appointment')
                 ->with('error', 'Failed to confirm appointment. Please try again.');
         }
     }
 
-    /**
-     * Return appointments for logged in patient
-     */
     public function getAppointments(Request $request)
     {
         $appointments = Appointment::with(['dentist', 'branch', 'schedule', 'treatments'])
@@ -192,109 +259,4 @@ class AppointmentController extends Controller
         return response()->json(['appointments' => $appointments]);
     }
 
-    /**
-     * Cancel an appointment
-     */
-    public function cancel(Request $request, $appointmentId)
-    {
-        $appointment = Appointment::where('appointment_id', $appointmentId)
-            ->where('patient_id', Auth::id())
-            ->firstOrFail();
-
-        if ($appointment->status !== 'Scheduled') {
-            return response()->json(['message' => 'Only scheduled appointments can be cancelled.'], 400);
-        }
-
-        try {
-            return DB::transaction(function () use ($appointment, $request) {
-                // Update appointment status
-                $appointment->update([
-                    'status' => 'Cancelled',
-                    'status_changed_by' => Auth::id(),
-                    'status_changed_at' => now(),
-                    'reason_for_status_change' => $request->input('reason', 'Cancelled by patient'),
-                ]);
-
-                // Mark the associated schedule as available
-                if ($appointment->schedule) {
-                    $appointment->schedule->update(['is_active' => true]);
-                }
-
-                return response()->json(['message' => 'Appointment cancelled successfully.']);
-            });
-        } catch (\Exception $e) {
-            Log::error('Failed to cancel appointment: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to cancel appointment. Please try again.'], 500);
-        }
-    }
-
-    /**
-     * Reschedule an appointment
-     */
-    public function reschedule(Request $request, $appointmentId)
-    {
-        $validated = $request->validate([
-            'schedule_id' => 'required|exists:schedules,schedule_id',
-            'treatment_ids' => 'required|array|min:1',
-            'treatment_ids.*' => 'exists:treatments,id',
-            'notes' => 'nullable|string',
-            'reason' => 'nullable|string',
-        ]);
-
-        $appointment = Appointment::where('appointment_id', $appointmentId)
-            ->where('patient_id', Auth::id())
-            ->firstOrFail();
-
-        if ($appointment->status !== 'Scheduled') {
-            return response()->json(['message' => 'Only scheduled appointments can be rescheduled.'], 400);
-        }
-
-        $newSchedule = Schedule::where('schedule_id', $validated['schedule_id'])
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        DB::transaction(function () use ($appointment, $newSchedule, $validated) {
-            if ($appointment->schedule) {
-                $appointment->schedule->update(['is_active' => true]);
-            }
-
-            $appointment->update([
-                'schedule_id' => $validated['schedule_id'],
-                'notes' => $validated['notes'],
-                'status_changed_by' => Auth::id(),
-                'status_changed_at' => now(),
-                'reason_for_status_change' => $validated['reason'] ?? 'Rescheduled by patient',
-            ]);
-
-            AppointmentTreatment::where('appointment_id', $appointment->id)->delete();
-            foreach ($validated['treatment_ids'] as $treatmentId) {
-                AppointmentTreatment::create([
-                    'appointment_id' => $appointment->id,
-                    'treatment_id' => $treatmentId,
-                ]);
-            }
-
-            $newSchedule->update(['is_active' => false]);
-        });
-
-        $updatedAppointment = Appointment::with(['dentist', 'branch', 'schedule', 'treatments'])
-            ->where('appointment_id', $appointmentId)
-            ->first();
-
-        return response()->json([
-            'message' => 'Appointment rescheduled successfully.',
-            'appointment' => [
-                'appointment_id' => $updatedAppointment->appointment_id,
-                'date' => optional($updatedAppointment->schedule)->date,
-                'time' => optional($updatedAppointment->schedule)->time,
-                'branch' => optional($updatedAppointment->branch)->name ?? 'N/A',
-                'dentist' => optional($updatedAppointment->dentist)->full_name ?? 'N/A',
-                'services' => $updatedAppointment->treatments->pluck('name')->toArray(),
-                'status' => $updatedAppointment->status,
-                'notes' => $updatedAppointment->notes,
-                'created_at' => $updatedAppointment->created_at->toDateTimeString(),
-                'updated_at' => $updatedAppointment->updated_at->toDateTimeString(),
-            ]
-        ]);
-    }
 }

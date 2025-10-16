@@ -63,13 +63,17 @@ class Appointment extends Model
     }
     public function billing()
     {
-        return $this->belongsTo('App\Models\Billing\Billing', 'billing_id', 'billing_id');
+        return $this->belongsTo('App\Models\Billing\Billings', 'billing_id', 'billing_id');
     }
         public function payments()
         {
             return $this->hasMany('App\Models\Billing\Payments', 'appointment_id', 'appointment_id');
         }
 
+        public function statusChangedBy()
+        {
+            return $this->belongsTo('App\Models\Users\User', 'status_changed_by', 'user_id');
+        }   
     /**
      * Boot method to generate custom appointment_id when creating a new record
      */

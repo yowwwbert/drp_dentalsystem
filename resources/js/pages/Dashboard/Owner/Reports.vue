@@ -7,6 +7,7 @@ import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { FileText, Download, Eye, Calendar, TrendingUp, Users, FileSpreadsheet, X } from 'lucide-vue-next';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -55,10 +56,12 @@ const months = [
     { value: '11', label: 'November' },
     { value: '12', label: 'December' },
 ];
+
 const days = Array.from({ length: 31 }, (_, i) => ({
     value: (i + 1).toString().padStart(2, '0'),
     label: (i + 1).toString(),
 }));
+
 const years = Array.from({ length: 10 }, (_, i) => {
     const year = new Date().getFullYear() - 5 + i;
     return { value: year.toString(), label: year.toString() };
@@ -343,14 +346,28 @@ const reportBreakdown = computed(() => {
     const rangeDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24);
     const periodType = rangeDays > 90 ? 'monthly' : 'daily';
 
-    const breakdownMap = new Map<string, { newPatients: number; returningPatients: number; totalPatients: number; completed: number; cancelled: number; totalAppointments: number; }>();
+    const breakdownMap = new Map<string, { 
+        newPatients: number; 
+        returningPatients: number; 
+        totalPatients: number; 
+        completed: number; 
+        cancelled: number; 
+        totalAppointments: number; 
+    }>();
 
     // Initialize all periods with zeros
     let periods: string[] = [];
     if (periodType === 'monthly') {
         periods = getAllMonthsInRange(start, end);
         periods.forEach(period => {
-            breakdownMap.set(period, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
+            breakdownMap.set(period, { 
+                newPatients: 0, 
+                returningPatients: 0, 
+                totalPatients: 0, 
+                completed: 0, 
+                cancelled: 0, 
+                totalAppointments: 0 
+            });
         });
     }
 
@@ -362,7 +379,14 @@ const reportBreakdown = computed(() => {
             const key = getPeriodKey(patientDate, periodType);
 
             if (!breakdownMap.has(key) && periodType !== 'monthly') {
-                breakdownMap.set(key, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
+                breakdownMap.set(key, { 
+                    newPatients: 0, 
+                    returningPatients: 0, 
+                    totalPatients: 0, 
+                    completed: 0, 
+                    cancelled: 0, 
+                    totalAppointments: 0 
+                });
             }
 
             const entry = breakdownMap.get(key)!;
@@ -386,7 +410,14 @@ const reportBreakdown = computed(() => {
             const key = getPeriodKey(dayDate, periodType);
 
             if (!breakdownMap.has(key) && periodType !== 'monthly') {
-                breakdownMap.set(key, { newPatients: 0, returningPatients: 0, totalPatients: 0, completed: 0, cancelled: 0, totalAppointments: 0 });
+                breakdownMap.set(key, { 
+                    newPatients: 0, 
+                    returningPatients: 0, 
+                    totalPatients: 0, 
+                    completed: 0, 
+                    cancelled: 0, 
+                    totalAppointments: 0 
+                });
             }
 
             const entry = breakdownMap.get(key)!;
@@ -398,7 +429,10 @@ const reportBreakdown = computed(() => {
 
     // Sort keys chronologically
     const sortedKeys = Array.from(breakdownMap.keys()).sort();
-    return sortedKeys.map(key => ({ period: formatDateToWords(key, periodType), ...breakdownMap.get(key)! }));
+    return sortedKeys.map(key => ({ 
+        period: formatDateToWords(key, periodType), 
+        ...breakdownMap.get(key)! 
+    }));
 });
 
 const hasValidDates = computed(() => {
@@ -423,20 +457,56 @@ const handleDownloadPDF = () => {
         return;
     }
     const doc = new jsPDF();
-    doc.text(`${selectedReportType.value} (${formatDateToWords(startDate.value, 'daily')} to ${formatDateToWords(endDate.value, 'daily')})`, 14, 16);
+    
+    // Title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(selectedReportType.value, 14, 20);
+    
+    // Date Range
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100);
+    doc.text(`${formatDateToWords(startDate.value, 'daily')} to ${formatDateToWords(endDate.value, 'daily')}`, 14, 27);
+    doc.setTextColor(0);
     
     // Summary Table
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Summary', 14, 38);
+    
     autoTable(doc, {
         head: [['Category', 'Total']],
         body: reportData.value.map(row => [row.category, row.total]),
-        startY: 22,
-        headStyles: { fillColor: [0, 105, 92], textColor: [255, 255, 255], fontStyle: 'bold' },
-        bodyStyles: { fontSize: 10 },
-        alternateRowStyles: { fillColor: [240, 240, 240] },
+        startY: 42,
+        headStyles: { 
+            fillColor: [30, 79, 79], 
+            textColor: [255, 255, 255], 
+            fontStyle: 'bold',
+            fontSize: 11,
+            halign: 'left'
+        },
+        bodyStyles: { 
+            fontSize: 10,
+            textColor: [50, 50, 50]
+        },
+        columnStyles: {
+            0: { cellWidth: 120 },
+            1: { halign: 'right', fontStyle: 'bold' }
+        },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+        margin: { left: 14, right: 14 },
+        theme: 'grid'
     });
 
     // Breakdown Table
     if (reportBreakdown.value.length > 0) {
+        const finalY = ((doc as any).lastAutoTable?.finalY) ?? 42;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Breakdown', 14, finalY + 12);
+        
         const head = selectedReportType.value === 'Patient Report'
             ? [['Period', 'New Patients', 'Returning Patients', 'Total Patients']]
             : [['Period', 'Completed', 'Cancelled', 'Total']];
@@ -445,18 +515,58 @@ const handleDownloadPDF = () => {
                 ? [row.period, row.newPatients, row.returningPatients, row.totalPatients]
                 : [row.period, row.completed, row.cancelled, row.totalAppointments]
         );
-        doc.text('Breakdown', 14, doc.lastAutoTable.finalY + 10);
+        
         autoTable(doc, {
             head,
             body,
-            startY: doc.lastAutoTable.finalY + 16,
-            headStyles: { fillColor: [0, 105, 92], textColor: [255, 255, 255], fontStyle: 'bold' },
-            bodyStyles: { fontSize: 10 },
-            alternateRowStyles: { fillColor: [240, 240, 240] },
+            startY: finalY + 16,
+            headStyles: { 
+                fillColor: [30, 79, 79], 
+                textColor: [255, 255, 255], 
+                fontStyle: 'bold',
+                fontSize: 10,
+                halign: 'center'
+            },
+            bodyStyles: { 
+                fontSize: 9,
+                textColor: [50, 50, 50]
+            },
+            columnStyles: {
+                0: { cellWidth: 'auto', halign: 'left', fontStyle: 'bold' },
+                1: { halign: 'right' },
+                2: { halign: 'right' },
+                3: { halign: 'right', fontStyle: 'bold' }
+            },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            margin: { left: 14, right: 14 },
+            theme: 'grid'
         });
     }
 
-    doc.save(`${selectedReportType.value.toLowerCase().replace(' ', '_')}_${startDate.value}_to_${endDate.value}.pdf`);
+    // Footer
+    // Use getNumberOfPages if available (older/newer jspdf builds), otherwise fallback to pages length
+    const pageCount = typeof (doc as any).getNumberOfPages === 'function'
+        ? (doc as any).getNumberOfPages()
+        : (doc.internal.pages ? doc.internal.pages.length : 1);
+
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+            `Page ${i} of ${pageCount}`,
+            doc.internal.pageSize.width / 2,
+            doc.internal.pageSize.height - 10,
+            { align: 'center' }
+        );
+        doc.text(
+            `Generated on ${new Date().toLocaleDateString()}`,
+            14,
+            doc.internal.pageSize.height - 10
+        );
+    }
+
+    doc.save(`${selectedReportType.value.toLowerCase().replace(/ /g, '_')}_${startDate.value}_to_${endDate.value}.pdf`);
 };
 
 const handleDownloadExcel = () => {
@@ -505,369 +615,536 @@ const handleGenerateReport = async () => {
     }
 };
 </script>
-
 <template>
     <Head title="Reports" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 rounded-xl p-6 bg-gray-50 min-h-screen relative">
-            <div class="flex justify-between items-center mb-4">
-                <h1 class="text-3xl font-bold text-gray-900">Reports</h1>
-            </div>
-            <form class="space-y-4">
-                <div class="flex gap-4 mb-2">
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Report Type</label>
-                        <select 
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white" 
-                            v-model="selectedReportType"
-                        >
-                            <option value="Patient Report">Patient Report</option>
-                            <option value="Appointment Report">Appointment Report</option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Period</label>
-                        <select 
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            v-model="selectedPeriod"
-                        >
-                            <option>Year</option>
-                            <option>Month</option>
-                            <option>Weekly</option>
-                            <option>Custom Range</option>
-                        </select>
+        <div class="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors duration-300 rounded-xl mt-2 p-4">
+            <div class="px-4 py-4 mx-auto">
+                <!-- Header Section -->
+                <div class="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 class="text-4xl font-bold mb-2 text-gray-900 dark:text-white">
+                            Reports
+                        </h1>
+                        <p class="text-lg text-gray-600 dark:text-neutral-400">
+                            Generate and export detailed reports for your clinic
+                        </p>
                     </div>
                 </div>
-                <div v-if="selectedPeriod === 'Year'" class="flex gap-4 mb-2">
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Start Year</label>
-                        <select
-                            v-model="startYearSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="year in years" :key="year.value" :value="year.value">
-                                {{ year.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">End Year</label>
-                        <select
-                            v-model="endYearSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="year in years" :key="year.value" :value="year.value">
-                                {{ year.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setStartToday"
-                        >
-                            Set Start to Today
-                        </button>
-                    </div>
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setEndToday"
-                        >
-                            Set End to Today
-                        </button>
+
+                <!-- Configuration Card -->
+                <div class="bg-white dark:bg-neutral-800 rounded-2xl border border-gray-100 dark:border-neutral-700 shadow-lg mb-6">
+                    <div class="p-6">
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                            <TrendingUp :size="24" class="text-darkGreen-900" />
+                            Report Configuration
+                        </h2>
+                        
+                        <form class="space-y-6">
+                            <!-- Report Type and Period -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                                        Report Type <span class="text-red-500">*</span>
+                                    </label>
+                                    <select 
+                                        class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200" 
+                                        v-model="selectedReportType"
+                                    >
+                                        <option value="Patient Report">Patient Report</option>
+                                        <option value="Appointment Report">Appointment Report</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">
+                                        Period <span class="text-red-500">*</span>
+                                    </label>
+                                    <select 
+                                        class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                        v-model="selectedPeriod"
+                                    >
+                                        <option value="Year">Year</option>
+                                        <option value="Month">Month</option>
+                                        <option value="Weekly">Weekly</option>
+                                        <option value="Custom Range">Custom Range</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Year Period -->
+                            <div v-if="selectedPeriod === 'Year'" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">Start Year</label>
+                                        <select
+                                            v-model="startYearSelect"
+                                            class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                        >
+                                            <option v-for="year in years" :key="year.value" :value="year.value">
+                                                {{ year.label }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">End Year</label>
+                                        <select
+                                            v-model="endYearSelect"
+                                            class="w-full px-4 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                        >
+                                            <option v-for="year in years" :key="year.value" :value="year.value">
+                                                {{ year.label }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Month Period -->
+                            <div v-if="selectedPeriod === 'Month'" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-neutral-300">Start Date</label>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <select
+                                                v-model="startMonthSelect"
+                                                class="px-3 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                            >
+                                                <option v-for="month in months" :key="month.value" :value="month.value">
+                                                    {{ month.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="startYearSelect"
+                                                class="px-3 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                            >
+                                                <option v-for="year in years" :key="year.value" :value="year.value">
+                                                    {{ year.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-neutral-300">End Date</label>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <select
+                                                v-model="endMonthSelect"
+                                                class="px-3 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                            >
+                                                <option v-for="month in months" :key="month.value" :value="month.value">
+                                                    {{ month.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="endYearSelect"
+                                                class="px-3 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200"
+                                            >
+                                                <option v-for="year in years" :key="year.value" :value="year.value">
+                                                    {{ year.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Weekly/Custom Range -->
+                            <div v-if="selectedPeriod === 'Weekly' || selectedPeriod === 'Custom Range'" class="space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">Start Date</label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <select
+                                                v-model="startMonth"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Month</option>
+                                                <option v-for="month in months" :key="month.value" :value="month.value">
+                                                    {{ month.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="startDay"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Day</option>
+                                                <option v-for="day in validDays" :key="day.value" :value="day.value">
+                                                    {{ day.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="startYear"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Year</option>
+                                                <option v-for="year in years" :key="year.value" :value="year.value">
+                                                    {{ year.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700 dark:text-neutral-300">End Date</label>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <select
+                                                v-model="endMonth"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Month</option>
+                                                <option v-for="month in months" :key="month.value" :value="month.value">
+                                                    {{ month.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="endDay"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Day</option>
+                                                <option v-for="day in validDays" :key="day.value" :value="day.value">
+                                                    {{ day.label }}
+                                                </option>
+                                            </select>
+                                            <select
+                                                v-model="endYear"
+                                                class="px-2 py-3 rounded-xl border bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white focus:border-darkGreen-900 dark:focus:border-darkGreen-400 focus:outline-none focus:ring-2 focus:ring-darkGreen-900/30 dark:focus:ring-darkGreen-400/30 transition-all duration-200 text-sm"
+                                            >
+                                                <option value="" disabled>Year</option>
+                                                <option v-for="year in years" :key="year.value" :value="year.value">
+                                                    {{ year.label }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <button 
+                                        type="button" 
+                                        class="px-4 py-2.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-neutral-300 rounded-xl hover:bg-gray-200 dark:hover:bg-neutral-600 transition-all duration-200 text-sm font-medium flex items-center gap-2"
+                                        @click="setStartToday"
+                                    >
+                                        <Calendar :size="16" />
+                                        Set Start to Today
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        class="px-4 py-2.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-neutral-300 rounded-xl hover:bg-gray-200 dark:hover:bg-neutral-600 transition-all duration-200 text-sm font-medium flex items-center gap-2"
+                                        @click="setEndToday"
+                                    >
+                                        <Calendar :size="16" />
+                                        Set End to Today
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div v-if="errorMessage" class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 text-sm">
+                                {{ errorMessage }}
+                            </div>
+
+                            <!-- Generate Button -->
+                            <div class="flex justify-end pt-4 border-t border-gray-200 dark:border-neutral-700">
+                                <button 
+                                    type="button" 
+                                    class="px-6 py-3 bg-darkGreen-900 text-white rounded-xl hover:bg-darkGreen-800 transition-all duration-200 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+                                    :disabled="!startMonth || !startDay || !startYear || !endMonth || !endDay || !endYear || isLoading"
+                                    @click="handleGenerateReport"
+                                >
+                                    <TrendingUp :size="20" />
+                                    {{ isLoading ? 'Generating...' : 'Generate Report' }}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div v-if="selectedPeriod === 'Month'" class="flex gap-4 mb-2">
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Start Month</label>
-                        <select
-                            v-model="startMonthSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="month in months" :key="month.value" :value="month.value">
-                                {{ month.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Start Year</label>
-                        <select
-                            v-model="startYearSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="year in years" :key="year.value" :value="year.value">
-                                {{ year.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">End Month</label>
-                        <select
-                            v-model="endMonthSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="month in months" :key="month.value" :value="month.value">
-                                {{ month.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">End Year</label>
-                        <select
-                            v-model="endYearSelect"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                        >
-                            <option v-for="year in years" :key="year.value" :value="year.value">
-                                {{ year.label }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setStartToday"
-                        >
-                            Set Start to Today
-                        </button>
-                    </div>
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setEndToday"
-                        >
-                            Set End to Today
-                        </button>
-                    </div>
-                </div>
-                <div class="flex gap-4 mb-2" v-if="selectedPeriod === 'Weekly' || selectedPeriod === 'Custom Range'">
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">Start Date</label>
-                        <div class="flex gap-2">
-                            <select
-                                v-model="startMonth"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Month</option>
-                                <option v-for="month in months" :key="month.value" :value="month.value">
-                                    {{ month.label }}
-                                </option>
-                            </select>
-                            <select
-                                v-model="startDay"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Day</option>
-                                <option v-for="day in validDays" :key="day.value" :value="day.value">
-                                    {{ day.label }}
-                                </option>
-                            </select>
-                            <select
-                                v-model="startYear"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Year</option>
-                                <option v-for="year in years" :key="year.value" :value="year.value">
-                                    {{ year.label }}
-                                </option>
-                            </select>
+
+                <!-- Report Display -->
+                <div v-if="showReport" class="space-y-6">
+                    <!-- Report Header -->
+                    <div class="bg-white dark:bg-neutral-800 rounded-2xl border border-gray-100 dark:border-neutral-700 shadow-lg overflow-hidden">
+                        <div class="bg-darkGreen-900 p-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-white/10 rounded-lg">
+                                        <Users v-if="selectedReportType === 'Patient Report'" class="text-white" :size="24" />
+                                        <Calendar v-else class="text-white" :size="24" />
+                                    </div>
+                                    <div>
+                                        <h3 class="text-2xl font-bold text-white">{{ selectedReportType }}</h3>
+                                        <p class="text-white/80 text-sm mt-1">
+                                            {{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button 
+                                        @click="handlePreview" 
+                                        class="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200"
+                                        title="Preview"
+                                    >
+                                        <Eye :size="20" />
+                                    </button>
+                                    <button 
+                                        @click="handleDownloadPDF" 
+                                        class="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200"
+                                        title="Download PDF"
+                                    >
+                                        <Download :size="20" />
+                                    </button>
+                                    <button 
+                                        @click="handleDownloadExcel" 
+                                        class="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200"
+                                        title="Download Excel"
+                                    >
+                                        <FileSpreadsheet :size="20" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Data State -->
+                        <div v-if="!hasReportData" class="p-12 text-center">
+                            <div class="w-16 h-16 bg-gray-100 dark:bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <FileText class="text-gray-400 dark:text-neutral-500" :size="32" />
+                            </div>
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Data Available</h4>
+                            <p class="text-sm text-gray-600 dark:text-neutral-400">No data found for the selected date range.</p>
+                        </div>
+
+                        <!-- Report Content -->
+                        <div v-else class="p-6">
+                            <!-- Summary Section -->
+                            <div class="mb-8">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Summary</h4>
+                                <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700">
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr class="bg-darkGreen-900">
+                                                <th class="text-left px-6 py-4 text-white font-semibold">Category</th>
+                                                <th class="text-right px-6 py-4 text-white font-semibold">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
+                                            <tr v-for="(row, index) in reportData" :key="row.category" 
+                                                :class="index % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-gray-50 dark:bg-neutral-800/50'">
+                                                <td class="px-6 py-4 text-gray-900 dark:text-white">{{ row.category }}</td>
+                                                <td class="px-6 py-4 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.total }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Breakdown Section -->
+                            <div v-if="reportBreakdown.length > 0">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Breakdown</h4>
+                                <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-neutral-700">
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr class="bg-darkGreen-900">
+                                                <th class="text-left px-6 py-4 text-white font-semibold whitespace-nowrap">Period</th>
+                                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">New Patients</th>
+                                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">Returning Patients</th>
+                                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">Total Patients</th>
+                                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">Completed</th>
+                                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">Cancelled</th>
+                                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-4 text-white font-semibold whitespace-nowrap">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
+                                            <tr v-for="(row, index) in reportBreakdown" :key="row.period"
+                                                :class="index % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-gray-50 dark:bg-neutral-800/50'">
+                                                <td class="px-6 py-4 text-gray-900 dark:text-white font-medium">{{ row.period }}</td>
+                                                <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-4 text-right text-gray-700 dark:text-neutral-300">{{ row.newPatients }}</td>
+                                                <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-4 text-right text-gray-700 dark:text-neutral-300">{{ row.returningPatients }}</td>
+                                                <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-4 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.totalPatients }}</td>
+                                                <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-4 text-right text-gray-700 dark:text-neutral-300">{{ row.completed }}</td>
+                                                <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-4 text-right text-gray-700 dark:text-neutral-300">{{ row.cancelled }}</td>
+                                                <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-4 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.totalAppointments }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-neutral-700">
+                                <button 
+                                    @click="handlePreview" 
+                                    class="flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-neutral-300 rounded-xl hover:bg-gray-200 dark:hover:bg-neutral-600 transition-all duration-200 font-medium"
+                                >
+                                    <Eye :size="18" />
+                                    Preview
+                                </button>
+                                <button 
+                                    @click="handleDownloadPDF" 
+                                    class="flex items-center gap-2 px-5 py-2.5 bg-darkGreen-900 text-white rounded-xl hover:bg-darkGreen-800 transition-all duration-200 font-medium"
+                                >
+                                    <Download :size="18" />
+                                    Download PDF
+                                </button>
+                                <button 
+                                    @click="handleDownloadExcel" 
+                                    class="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-200 font-medium"
+                                >
+                                    <FileSpreadsheet :size="18" />
+                                    Download Excel
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex-1">
-                        <label class="font-medium mr-2 text-gray-700">End Date</label>
-                        <div class="flex gap-2">
-                            <select
-                                v-model="endMonth"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Month</option>
-                                <option v-for="month in months" :key="month.value" :value="month.value">
-                                    {{ month.label }}
-                                </option>
-                            </select>
-                            <select
-                                v-model="endDay"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Day</option>
-                                <option v-for="day in validDays" :key="day.value" :value="day.value">
-                                    {{ day.label }}
-                                </option>
-                            </select>
-                            <select
-                                v-model="endYear"
-                                class="w-1/3 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-900 bg-white"
-                            >
-                                <option value="" disabled selected>Year</option>
-                                <option v-for="year in years" :key="year.value" :value="year.value">
-                                    {{ year.label }}
-                                </option>
-                            </select>
+                </div>
+
+                <!-- Preview Modal -->
+                <div v-if="showPreview" class="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 p-4">
+                    <div class="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-neutral-700 flex flex-col">
+                        <!-- Modal Header -->
+                        <div class="bg-darkGreen-900 p-6 flex-shrink-0">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-white">{{ selectedReportType }}</h3>
+                                    <p class="text-white/80 text-sm mt-1">{{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }}</p>
+                                </div>
+                                <button 
+                                    @click="showPreview = false" 
+                                    class="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                                >
+                                    <X :size="24" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div v-if="selectedPeriod === 'Weekly' || selectedPeriod === 'Custom Range'" class="flex gap-4 mb-2">
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setStartToday"
-                        >
-                            Set Start to Today
-                        </button>
-                    </div>
-                    <div class="flex-1">
-                        <button 
-                            type="button" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition"
-                            @click="setEndToday"
-                        >
-                            Set End to Today
-                        </button>
-                    </div>
-                </div>
-                <div v-if="errorMessage" class="text-red-600 text-sm mt-2">
-                    {{ errorMessage }}
-                </div>
-                <button 
-                    type="button" 
-                    class="bg-teal-900 text-white px-4 py-2 rounded mt-4 hover:bg-teal-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    :disabled="!startMonth || !startDay || !startYear || !endMonth || !endDay || !endYear || isLoading"
-                    @click="handleGenerateReport"
-                >
-                    {{ isLoading ? 'Generating...' : 'Generate Report' }}
-                </button>
-            </form>
-            <div v-if="showPreview" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-                <div class="bg-white rounded-lg shadow-lg p-8 min-w-[500px] max-w-4xl relative">
-                    <h3 class="font-bold mb-6 text-xl text-gray-900">{{ selectedReportType }} ({{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }})</h3>
-                    <div v-if="!hasReportData" class="text-center py-10 text-gray-700">
-                        <p class="text-lg font-semibold">No reports available</p>
-                        <p class="text-sm mt-2">No data found for the selected date range.</p>
-                    </div>
-                    <table v-else class="w-full border-collapse text-sm mb-6">
-                        <thead>
-                            <tr class="bg-teal-900 text-white">
-                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Category</th>
-                                <th class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, index) in reportData" :key="row.category" 
-                                :class="index % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
-                                <td class="px-4 py-3 border-b border-gray-200">{{ row.category }}</td>
-                                <td class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.total }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-6 mb-3 text-lg text-gray-900">Breakdown</h4>
-                    <table v-if="reportBreakdown.length > 0" class="w-full border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-teal-900 text-white">
-                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Period</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">New Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Returning Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Total Patients</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Completed</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Cancelled</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, index) in reportBreakdown" :key="row.period"
-                                :class="[index % 2 === 0 ? 'bg-gray-50' : 'bg-white', row.period.includes(String(new Date(startDate.value).getFullYear())) ? '' : 'border-t-2 border-gray-300']">
-                                <td class="px-4 py-3 border-b border-gray-200">{{ row.period }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.newPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.returningPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalPatients }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.completed }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.cancelled }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalAppointments }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <button 
-                        @click="showPreview = false" 
-                        class="absolute top-4 right-4 text-gray-500 hover:text-black text-xl font-bold"
-                    >
-                        &times;
-                    </button>
-                </div>
-            </div>
-            <div v-if="showReport" class="mb-8">
-                <h3 class="font-bold mb-4 text-xl text-gray-900">{{ selectedReportType }} Report ({{ formatDateToWords(startDate, 'daily') }} to {{ formatDateToWords(endDate, 'daily') }})</h3>
-                <div v-if="!hasReportData" class="text-center py-10 text-gray-500 border border-gray-200 rounded-lg">
-                    <p class="text-lg font-semibold">No reports available</p>
-                    <p class="text-sm mt-2">No data found for the selected date range.</p>
-                </div>
-                <div v-else>
-                    <table class="w-full border-collapse text-sm mb-6">
-                        <thead>
-                            <tr class="bg-teal-900 text-white">
-                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Category</th>
-                                <th class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, index) in reportData" :key="row.category" 
-                                :class="index % 2 === 0 ? 'bg-gray-50' : 'bg-white'">
-                                <td class="px-4 py-3 border-b border-gray-200">{{ row.category }}</td>
-                                <td class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.total }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <h4 v-if="reportBreakdown.length > 0" class="font-bold mt-6 mb-3 text-lg text-gray-900">Breakdown</h4>
-                    <table v-if="reportBreakdown.length > 0" class="w-full border-collapse text-sm">
-                        <thead>
-                            <tr class="bg-teal-900 text-white">
-                                <th class="text-left px-4 py-3 font-semibold rounded-tl-lg">Period</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">New Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Returning Patients</th>
-                                <th v-if="selectedReportType === 'Patient Report'" class="text-right px-4 py-3 font-semibold">Total Patients</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Completed</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold">Cancelled</th>
-                                <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-4 py-3 font-semibold rounded-tr-lg">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, index) in reportBreakdown" :key="row.period"
-                                :class="[index % 2 === 0 ? 'bg-gray-50' : 'bg-white', row.period.includes(String(new Date(startDate.value).getFullYear())) ? '' : 'border-t-2 border-gray-300']">
-                                <td class="px-4 py-3 border-b border-gray-200">{{ row.period }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.newPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.returningPatients }}</td>
-                                <td v-if="selectedReportType === 'Patient Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalPatients }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.completed }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right">{{ row.cancelled }}</td>
-                                <td v-if="selectedReportType === 'Appointment Report'" class="px-4 py-3 border-b border-gray-200 text-right font-medium">{{ row.totalAppointments }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div class="flex gap-3 mt-6">
-                        <button 
-                            @click="handlePreview" 
-                            class="bg-teal-900 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition"
-                        >
-                            Preview
-                        </button>
-                        <button 
-                            @click="handleDownloadPDF" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition"
-                        >
-                            Download as PDF
-                        </button>
-                        <button 
-                            @click="handleDownloadExcel" 
-                            class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition"
-                        >
-                            Download as Excel
-                        </button>
+
+                        <!-- Modal Body -->
+                        <div class="flex-1 overflow-y-auto p-6">
+                            <!-- No Data State -->
+                            <div v-if="!hasReportData" class="text-center py-16">
+                                <div class="w-16 h-16 bg-gray-100 dark:bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FileText class="text-gray-400 dark:text-neutral-500" :size="32" />
+                                </div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Data Available</h4>
+                                <p class="text-sm text-gray-600 dark:text-neutral-400">No data found for the selected date range.</p>
+                            </div>
+
+                            <!-- Report Content -->
+                            <div v-else class="space-y-8">
+                                <!-- Summary -->
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Summary</h4>
+                                    <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700">
+                                        <table class="w-full text-sm">
+                                            <thead>
+                                                <tr class="bg-darkGreen-900">
+                                                    <th class="text-left px-6 py-3 text-white font-semibold">Category</th>
+                                                    <th class="text-right px-6 py-3 text-white font-semibold">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
+                                                <tr v-for="(row, index) in reportData" :key="row.category" 
+                                                    :class="index % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-gray-50 dark:bg-neutral-800/50'">
+                                                    <td class="px-6 py-3 text-gray-900 dark:text-white">{{ row.category }}</td>
+                                                    <td class="px-6 py-3 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.total }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Breakdown -->
+                                <div v-if="reportBreakdown.length > 0">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Breakdown</h4>
+                                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-neutral-700">
+                                        <table class="w-full text-sm">
+                                            <thead>
+                                                <tr class="bg-darkGreen-900">
+                                                    <th class="text-left px-6 py-3 text-white font-semibold whitespace-nowrap">Period</th>
+                                                    <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">New Patients</th>
+                                                    <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">Returning Patients</th>
+                                                    <th v-if="selectedReportType === 'Patient Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">Total Patients</th>
+                                                    <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">Completed</th>
+                                                    <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">Cancelled</th>
+                                                    <th v-if="selectedReportType === 'Appointment Report'" class="text-right px-6 py-3 text-white font-semibold whitespace-nowrap">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
+                                                <tr v-for="(row, index) in reportBreakdown" :key="row.period"
+                                                    :class="index % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-gray-50 dark:bg-neutral-800/50'">
+                                                    <td class="px-6 py-3 text-gray-900 dark:text-white font-medium">{{ row.period }}</td>
+                                                    <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-3 text-right text-gray-700 dark:text-neutral-300">{{ row.newPatients }}</td>
+                                                    <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-3 text-right text-gray-700 dark:text-neutral-300">{{ row.returningPatients }}</td>
+                                                    <td v-if="selectedReportType === 'Patient Report'" class="px-6 py-3 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.totalPatients }}</td>
+                                                    <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-3 text-right text-gray-700 dark:text-neutral-300">{{ row.completed }}</td>
+                                                    <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-3 text-right text-gray-700 dark:text-neutral-300">{{ row.cancelled }}</td>
+                                                    <td v-if="selectedReportType === 'Appointment Report'" class="px-6 py-3 text-right font-semibold text-darkGreen-900 dark:text-darkGreen-400">{{ row.totalAppointments }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.bg-darkGreen-900 {
+    background-color: #1e4f4f;
+}
+
+.text-darkGreen-900 {
+    color: #1e4f4f;
+}
+
+.bg-darkGreen-800 {
+    background-color: #2d5f5c;
+}
+
+.dark .text-darkGreen-400 {
+    color: #4a9d9d;
+}
+
+.bg-neutral-750 {
+    background-color: #2a2a2a;
+}
+
+/* Smooth transitions */
+button,
+input,
+select {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar */
+.overflow-y-auto::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb,
+.dark .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #4b5563;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+</style>
